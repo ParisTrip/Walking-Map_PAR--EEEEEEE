@@ -43,10 +43,12 @@
   let headerHeight = 0;
 
   // ── OSRM Config ──
-  const OSRM_BASE = 'https://router.project-osrm.org/table/v1/foot';
+  const OSRM_ROUTE_BASE = 'https://router.project-osrm.org/route/v1/foot';
   const ROUTING_MOVE_THRESHOLD = 80;   // meters before re-routing
   const ROUTING_INTERVAL = 45000;      // auto-refresh ms
   const ROUTING_STALE_MS = 120000;     // show "last updated" after this
+  const ROUTE_BATCH_SIZE = 6;          // requests per batch
+  const ROUTE_BATCH_DELAY = 300;       // ms between batches
 
   // ── DOM refs ──
   const $ = (sel) => document.querySelector(sel);
@@ -454,47 +456,68 @@
     routingInFlight = true;
     showRoutingStatus('Updating walking times…');
 
-    // Build coordinates: source (user) + all destinations
-    const coords = [`${userLng},${userLat}`, ...visiblePlaces.map(p => `${p.longitude},${p.latitude}`)];
-    const url = `${OSRM_BASE}/${coords.join(';')}?sources=0&annotations=duration,distance`;
+    const now = Date.now();
+    let successCount = 0;
+    let errorCount = 0;
 
-    try {
-      const resp = await fetch(url);
-      if (!resp.ok) throw new Error(`OSRM ${resp.status}`);
-      const data = await resp.json();
+    // Batch places into groups to avoid hammering the server
+    const batches = [];
+    for (let i = 0; i < visiblePlaces.length; i += ROUTE_BATCH_SIZE) {
+      batches.push(visiblePlaces.slice(i, i + ROUTE_BATCH_SIZE));
+    }
 
-      if (data.code !== 'Ok' || !data.durations || !data.distances) {
-        throw new Error('OSRM response invalid');
-      }
+    for (let b = 0; b < batches.length; b++) {
+      const batch = batches[b];
 
-      const now = Date.now();
-      const durations = data.durations[0]; // source row
-      const distances = data.distances[0];
-
-      visiblePlaces.forEach((p, i) => {
-        const dur = durations[i + 1]; // +1 because index 0 is source-to-source
-        const dist = distances[i + 1];
-        if (dur != null && dist != null) {
-          routingCache[p.id] = { duration: dur, distance: dist, timestamp: now };
+      // Fetch each route in this batch concurrently
+      const promises = batch.map(async (p) => {
+        const url = `${OSRM_ROUTE_BASE}/${userLng},${userLat};${p.longitude},${p.latitude}?overview=false`;
+        try {
+          const resp = await fetch(url);
+          if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+          const data = await resp.json();
+          if (data.code === 'Ok' && data.routes && data.routes.length > 0) {
+            const route = data.routes[0];
+            routingCache[p.id] = {
+              duration: route.duration,
+              distance: route.distance,
+              timestamp: now
+            };
+            successCount++;
+          } else {
+            throw new Error('No route found');
+          }
+        } catch (e) {
+          errorCount++;
+          // Keep stale cache entry if it exists
         }
       });
 
-      lastRoutingPos = { lat: userLat, lng: userLng };
-      showRoutingStatus('');
+      await Promise.all(promises);
+
+      // Render progress after each batch so cards update progressively
       render();
-    } catch (e) {
-      console.warn('Routing error:', e.message);
-      // Show stale data gracefully
-      const cached = Object.values(routingCache).length;
-      if (cached > 0) {
-        showRoutingStatus('Using cached walking times');
-      } else {
-        showRoutingStatus('Could not fetch walking times — will retry');
+
+      // Small delay between batches to be respectful to the public server
+      if (b < batches.length - 1) {
+        await new Promise(r => setTimeout(r, ROUTE_BATCH_DELAY));
       }
-      render();
-    } finally {
-      routingInFlight = false;
     }
+
+    lastRoutingPos = { lat: userLat, lng: userLng };
+    routingInFlight = false;
+
+    if (errorCount > 0 && successCount === 0) {
+      const cached = Object.values(routingCache).length;
+      showRoutingStatus(cached > 0 ? 'Using cached walking times' : 'Could not fetch walking times — will retry');
+    } else if (errorCount > 0) {
+      showRoutingStatus(`Updated ${successCount} of ${successCount + errorCount} places`);
+      setTimeout(() => showRoutingStatus(''), 3000);
+    } else {
+      showRoutingStatus('');
+    }
+
+    render();
   }
 
   function showRoutingStatus(msg) {
