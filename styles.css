@@ -55,7 +55,7 @@ body {
 #app-header {
   position: sticky;
   top: 0;
-  z-index: 100;
+  z-index: 300;
   background: var(--bg);
   padding: calc(var(--safe-top) + 12px) 16px 0;
   border-bottom: 1px solid var(--border-light);
@@ -196,7 +196,7 @@ body {
   position: fixed;
   top: calc(var(--safe-top) + 56px);
   right: 16px;
-  z-index: 200;
+  z-index: 500;
   background: var(--bg-card);
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
@@ -228,7 +228,7 @@ body {
   bottom: calc(var(--safe-bottom) + 20px);
   left: 50%;
   transform: translateX(-50%);
-  z-index: 150;
+  z-index: 400;
   display: flex;
   background: var(--bg-card);
   border: 1px solid var(--border);
@@ -648,3 +648,5 @@ body {
 
 /* Leaflet z-index fixes for iPhone */
 .leaflet-top, .leaflet-bottom { z-index: 90 !important; }
+.leaflet-pane { z-index: 80 !important; }
+.leaflet-control { z-index: 90 !important; }
