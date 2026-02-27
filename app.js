@@ -1,7 +1,7 @@
 /* ════════════════════════════════════════════════
-   Paris Trip Companion — app.js v3.0
-   Uses OpenRouteService Matrix API for accurate
-   walking distances and times.
+   Paris Trip Companion — app.js v3.1
+   Uses OpenRouteService Directions API for
+   accurate walking distances and times.
    ════════════════════════════════════════════════ */
 
 (function () {
@@ -51,44 +51,48 @@
   var headerHeight = 0;
 
   // ── Routing Config ──
-  var ORS_MATRIX = 'https://api.openrouteservice.org/v2/matrix/foot-walking';
-  var ROUTING_MOVE_THRESHOLD = 80;   // meters before re-routing
-  var ROUTING_INTERVAL = 60000;      // auto-refresh every 60s
-  var ROUTING_STALE_MS = 180000;     // show stale indicator after 3 min
-  var ORS_MATRIX_LIMIT = 50;         // ORS limit per matrix call (free tier)
-  // Google Maps walking speed is roughly 4.5-5 km/h. ORS returns realistic
-  // walking durations so we use those directly instead of calculating our own.
+  var ORS_DIR = 'https://api.openrouteservice.org/v2/directions/foot-walking';
+  var ROUTING_MOVE_THRESHOLD = 80;
+  var ROUTING_INTERVAL = 60000;
+  var ROUTING_STALE_MS = 180000;
+  var BATCH_SIZE = 4;       // ORS free = 40 req/min, so 4 at a time
+  var BATCH_DELAY_MS = 700; // ~700ms between batches to stay under rate limit
 
   // ── DOM refs ──
   var $ = function(sel) { return document.querySelector(sel); };
   var $$ = function(sel) { return document.querySelectorAll(sel); };
 
-  var elList = $('#place-list');
-  var elEmpty = $('#empty-state');
-  var elCount = $('#results-count');
-  var elSearch = $('#search-input');
-  var elSearchClear = $('#search-clear');
-  var elFiltersTrack = $('#filters-track');
-  var elSortDropdown = $('#sort-dropdown');
-  var elLocationPrompt = $('#location-prompt');
-  var elRoutingStatus = $('#routing-status');
-  var elMapView = $('#map-view');
-  var elListView = $('#list-view');
-  var elMapDetail = $('#map-detail');
-  var elMapDetailContent = $('#map-detail-content');
+  var elList, elEmpty, elCount, elSearch, elSearchClear, elFiltersTrack;
+  var elSortDropdown, elLocationPrompt, elRoutingStatus;
+  var elMapView, elListView, elMapDetail, elMapDetailContent;
 
   // ════════════════════════════════════════════════
   //  INIT
   // ════════════════════════════════════════════════
 
   function init() {
-    console.log('[Paris v3.0] Initializing — ORS Matrix routing');
+    console.log('[Paris v3.1] Initializing — ORS Directions routing');
+
+    elList = $('#place-list');
+    elEmpty = $('#empty-state');
+    elCount = $('#results-count');
+    elSearch = $('#search-input');
+    elSearchClear = $('#search-clear');
+    elFiltersTrack = $('#filters-track');
+    elSortDropdown = $('#sort-dropdown');
+    elLocationPrompt = $('#location-prompt');
+    elRoutingStatus = $('#routing-status');
+    elMapView = $('#map-view');
+    elListView = $('#list-view');
+    elMapDetail = $('#map-detail');
+    elMapDetailContent = $('#map-detail-content');
+
     if (ORS_API_KEY === 'PASTE_YOUR_KEY_HERE') {
       console.warn('[Paris] ⚠️ No API key set! Paste your free OpenRouteService key in app.js');
     }
     showSkeletons();
 
-    fetch('approved_places.json?v=30')
+    fetch('approved_places.json?v=31')
       .then(function(resp) { return resp.json(); })
       .then(function(data) {
         places = data;
@@ -99,7 +103,7 @@
         bindEvents();
         checkLocationPermission();
       })
-      .catch(function(e) {
+      .catch(function() {
         elList.innerHTML = '<p style="padding:20px;color:#A89F94;">Could not load places data.</p>';
       });
   }
@@ -108,15 +112,10 @@
     if (navigator.permissions && navigator.permissions.query) {
       navigator.permissions.query({ name: 'geolocation' })
         .then(function(perm) {
-          if (perm.state === 'granted') {
-            startLocation();
-          } else {
-            showLocationPrompt();
-          }
+          if (perm.state === 'granted') startLocation();
+          else showLocationPrompt();
         })
-        .catch(function() {
-          showLocationPrompt();
-        });
+        .catch(function() { showLocationPrompt(); });
     } else {
       showLocationPrompt();
     }
@@ -147,7 +146,6 @@
         catCounts[c] = (catCounts[c] || 0) + 1;
       });
     });
-
     var html = '';
     Object.keys(CATEGORY_META).forEach(function(key) {
       if (!catCounts[key]) return;
@@ -168,23 +166,19 @@
 
   function getFilteredPlaces() {
     var list = places;
-
     if (activeFilters.size > 0) {
       list = list.filter(function(p) {
         return (p.category_tags || []).some(function(t) { return activeFilters.has(t); });
       });
     }
-
     if (searchQuery) {
       var q = searchQuery.toLowerCase();
       list = list.filter(function(p) {
-        var haystack = [
-          p.name, p.normalized_name, p.short_description, p.more_notes
-        ].concat(p.category_tags || []).join(' ').toLowerCase();
+        var haystack = [p.name, p.normalized_name, p.short_description, p.more_notes]
+          .concat(p.category_tags || []).join(' ').toLowerCase();
         return haystack.indexOf(q) !== -1;
       });
     }
-
     list = list.slice();
     if (currentSort === 'walking-time') {
       list.sort(function(a, b) {
@@ -210,7 +204,6 @@
 
   function render() {
     var filtered = getFilteredPlaces();
-
     if (filtered.length === 0) {
       elList.innerHTML = '';
       elEmpty.classList.remove('hidden');
@@ -220,14 +213,12 @@
       elCount.textContent = filtered.length + ' place' + (filtered.length !== 1 ? 's' : '');
       renderList(filtered);
     }
-
     if (mapReady) renderMapMarkers(filtered);
   }
 
   function renderList(list) {
     var now = Date.now();
     var html = '';
-
     list.forEach(function(p) {
       var rc = routingCache[p.id];
       var hasRouting = rc && rc.duration != null;
@@ -256,17 +247,14 @@
         '<div class="card-desc">' + esc(p.short_description) + '</div>' +
         (p.more_notes ?
           '<button class="card-more-toggle" data-target="notes-' + p.id + '">More details ▾</button>' +
-          '<div class="card-more-notes" id="notes-' + p.id + '">' + esc(p.more_notes) + '</div>'
-          : '') +
+          '<div class="card-more-notes" id="notes-' + p.id + '">' + esc(p.more_notes) + '</div>' : '') +
         '<div class="card-actions">' +
           '<button class="card-btn card-btn-map" data-action="show-map" data-id="' + p.id + '">' +
             '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/></svg> Map</button>' +
           '<a class="card-btn card-btn-nav" href="' + gmapsUrl + '" target="_blank" rel="noopener">' +
             '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l19-9-9 19-2-8-8-2z"/></svg> Directions</a>' +
-        '</div>' +
-      '</div>';
+        '</div></div>';
     });
-
     elList.innerHTML = html;
   }
 
@@ -276,62 +264,41 @@
 
   function initMap() {
     if (map) return;
-
-    map = L.map('map', {
-      center: [48.8566, 2.3522],
-      zoom: 13,
-      zoomControl: false,
-      attributionControl: false,
-    });
-
+    map = L.map('map', { center: [48.8566, 2.3522], zoom: 13, zoomControl: false, attributionControl: false });
     L.control.zoom({ position: 'topright' }).addTo(map);
     L.control.attribution({ position: 'bottomright', prefix: false })
-      .addAttribution('&copy; <a href="https://openstreetmap.org">OSM</a>')
-      .addTo(map);
-
+      .addAttribution('&copy; <a href="https://openstreetmap.org">OSM</a>').addTo(map);
     L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-      maxZoom: 19,
-      subdomains: 'abcd',
+      maxZoom: 19, subdomains: 'abcd'
     }).addTo(map);
-
     map.on('movestart', function() { mapFollowUser = false; });
-
     mapReady = true;
-
     if (userLat != null) addUserMarker();
     renderMapMarkers(getFilteredPlaces());
-
     setTimeout(function() { map.invalidateSize(); }, 200);
   }
 
   function addUserMarker() {
     if (!map || userLat == null) return;
-
     if (userPulse) map.removeLayer(userPulse);
     if (userMarker) map.removeLayer(userMarker);
-
     var pulseIcon = L.divIcon({ className: '', html: '<div class="user-marker-pulse"></div>', iconSize: [40, 40], iconAnchor: [20, 20] });
-    var userIcon = L.divIcon({ className: '', html: '<div class="user-marker"></div>', iconSize: [16, 16], iconAnchor: [8, 8] });
-
+    var uIcon = L.divIcon({ className: '', html: '<div class="user-marker"></div>', iconSize: [16, 16], iconAnchor: [8, 8] });
     userPulse = L.marker([userLat, userLng], { icon: pulseIcon, interactive: false, zIndexOffset: 500 }).addTo(map);
-    userMarker = L.marker([userLat, userLng], { icon: userIcon, interactive: false, zIndexOffset: 600 }).addTo(map);
+    userMarker = L.marker([userLat, userLng], { icon: uIcon, interactive: false, zIndexOffset: 600 }).addTo(map);
   }
 
   function updateUserMarker() {
     if (!map || userLat == null) return;
     if (userMarker) userMarker.setLatLng([userLat, userLng]);
     if (userPulse) userPulse.setLatLng([userLat, userLng]);
-    if (mapFollowUser && currentView === 'map') {
-      map.panTo([userLat, userLng], { animate: true, duration: 0.5 });
-    }
+    if (mapFollowUser && currentView === 'map') map.panTo([userLat, userLng], { animate: true, duration: 0.5 });
   }
 
   function renderMapMarkers(list) {
     if (!map) return;
-
     placeMarkers.forEach(function(m) { map.removeLayer(m); });
     placeMarkers = [];
-
     list.forEach(function(p) {
       var catIcon = '📍';
       (p.category_tags || []).some(function(t) {
@@ -341,11 +308,8 @@
       var icon = L.divIcon({
         className: '',
         html: '<div class="custom-marker"><span class="custom-marker-inner">' + catIcon + '</span></div>',
-        iconSize: [32, 32],
-        iconAnchor: [16, 32],
-        popupAnchor: [0, -34],
+        iconSize: [32, 32], iconAnchor: [16, 32], popupAnchor: [0, -34]
       });
-
       var marker = L.marker([p.latitude, p.longitude], { icon: icon }).addTo(map);
       marker.on('click', function() { showMapPopup(p, marker); });
       placeMarkers.push(marker);
@@ -358,27 +322,21 @@
     var gmapsUrl = getGoogleMapsUrl(p);
     var tags = (p.category_tags || []).map(function(t) {
       var meta = CATEGORY_META[t];
-      var label = meta ? meta.label : t;
-      return '<span class="card-tag">' + label + '</span>';
+      return '<span class="card-tag">' + (meta ? meta.label : t) + '</span>';
     }).join('');
-
     var statsHtml = '';
     if (hasRouting) {
       statsHtml = '<div class="popup-stats">' +
         '<div class="popup-stat"><span class="popup-stat-val">~' + formatDuration(rc.duration) + '</span> walk</div>' +
-        '<div class="popup-stat"><span class="popup-stat-val">' + formatDistance(rc.distance) + '</span></div>' +
-      '</div>';
+        '<div class="popup-stat"><span class="popup-stat-val">' + formatDistance(rc.distance) + '</span></div></div>';
     }
-
     var content = '<div class="popup-inner">' +
       '<div class="popup-name">' + esc(p.name) + '</div>' +
       '<div class="popup-tags">' + tags + '</div>' +
       '<div class="popup-desc">' + esc(p.short_description) + '</div>' +
       statsHtml +
       '<a class="popup-nav-btn" href="' + gmapsUrl + '" target="_blank" rel="noopener">' +
-        '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l19-9-9 19-2-8-8-2z"/></svg> Open in Google Maps</a>' +
-    '</div>';
-
+        '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l19-9-9 19-2-8-8-2z"/></svg> Open in Google Maps</a></div>';
     marker.bindPopup(content, { maxWidth: 280, closeButton: true }).openPopup();
   }
 
@@ -393,41 +351,26 @@
 
   function startLocation() {
     if (!navigator.geolocation) {
-      elLocationPrompt.innerHTML = '<p>Geolocation is not supported by your browser. You can still browse the guide!</p>';
+      elLocationPrompt.innerHTML = '<p>Geolocation is not supported. You can still browse the guide!</p>';
       elLocationPrompt.classList.remove('hidden');
       return;
     }
-
     elLocationPrompt.classList.add('hidden');
     $('#location-btn').classList.add('active');
-
-    locationWatchId = navigator.geolocation.watchPosition(
-      onLocationUpdate,
-      onLocationError,
-      { enableHighAccuracy: true, maximumAge: 10000, timeout: 15000 }
-    );
+    locationWatchId = navigator.geolocation.watchPosition(onLocationUpdate, onLocationError,
+      { enableHighAccuracy: true, maximumAge: 10000, timeout: 15000 });
     locationGranted = true;
   }
 
   function onLocationUpdate(pos) {
     var newLat = pos.coords.latitude;
     var newLng = pos.coords.longitude;
-
     var moved = userLat == null || haversine(userLat, userLng, newLat, newLng) > ROUTING_MOVE_THRESHOLD;
-
     userLat = newLat;
     userLng = newLng;
     console.log('[Paris] Location: ' + userLat.toFixed(5) + ', ' + userLng.toFixed(5));
-
-    if (mapReady) {
-      addUserMarker();
-      updateUserMarker();
-    }
-
-    if (moved) {
-      fetchRoutes();
-    }
-
+    if (mapReady) { addUserMarker(); updateUserMarker(); }
+    if (moved) fetchRoutes();
     if (!routingTimer) {
       routingTimer = setInterval(function() {
         if (locationGranted && userLat != null) fetchRoutes();
@@ -438,7 +381,7 @@
   function onLocationError(err) {
     console.warn('[Paris] Location error:', err.message);
     if (err.code === 1) {
-      elLocationPrompt.innerHTML = '<p>Location access was denied. You can still browse the guide! Tap the location button to try again.</p>';
+      elLocationPrompt.innerHTML = '<p>Location access denied. You can still browse! Tap location button to retry.</p>';
       elLocationPrompt.classList.remove('hidden');
       $('#location-btn').classList.remove('active');
       locationGranted = false;
@@ -446,15 +389,39 @@
   }
 
   // ════════════════════════════════════════════════
-  //  OPENROUTESERVICE MATRIX API
-  //  One request → distances & durations for all places
+  //  OPENROUTESERVICE DIRECTIONS API
+  //  Individual route requests in controlled batches.
+  //  GET endpoint — simple and reliable on free tier.
   // ════════════════════════════════════════════════
+
+  function fetchOneRoute(place) {
+    // ORS GET directions: start=lng,lat&end=lng,lat
+    var url = ORS_DIR + '?api_key=' + ORS_API_KEY +
+      '&start=' + userLng + ',' + userLat +
+      '&end=' + place.longitude + ',' + place.latitude;
+
+    return fetch(url)
+      .then(function(resp) {
+        if (resp.status === 429) throw new Error('Rate limited');
+        if (!resp.ok) throw new Error('HTTP ' + resp.status);
+        return resp.json();
+      })
+      .then(function(data) {
+        // GeoJSON response — summary is in features[0].properties.summary
+        var summary = data.features[0].properties.summary;
+        return {
+          id: place.id,
+          distance: summary.distance,  // meters — actual routed walking distance
+          duration: summary.duration    // seconds — ORS-calculated walking time
+        };
+      });
+  }
 
   function fetchRoutes() {
     if (userLat == null || routingInFlight) return;
     if (ORS_API_KEY === 'PASTE_YOUR_KEY_HERE') {
-      console.warn('[Paris] No API key — skipping routing. Get a free key at openrouteservice.org');
-      showRoutingStatus('API key needed — see README');
+      console.warn('[Paris] No API key — get a free one at openrouteservice.org');
+      showRoutingStatus('API key needed — see console');
       return;
     }
 
@@ -463,81 +430,62 @@
 
     routingInFlight = true;
     showRoutingStatus('Updating walking times…');
+    console.log('[Paris] Fetching routes for ' + visible.length + ' places via ORS Directions…');
 
-    // ORS Matrix: locations[0] = user, locations[1..n] = destinations
-    // sources=[0] means "route from index 0 to all others"
-    var locations = [[userLng, userLat]];
-    visible.forEach(function(p) {
-      locations.push([p.longitude, p.latitude]);
-    });
+    var now = Date.now();
+    var ok = 0;
+    var fail = 0;
+    var batchIndex = 0;
 
-    // ORS free tier allows up to 50 locations per matrix call
-    // With 44 places + 1 source = 45, we're fine in one call
-    var body = {
-      locations: locations,
-      sources: [0],
-      metrics: ['distance', 'duration']
-    };
-
-    console.log('[Paris] Fetching ORS matrix for ' + visible.length + ' places…');
-
-    fetch(ORS_MATRIX, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': ORS_API_KEY
-      },
-      body: JSON.stringify(body)
-    })
-    .then(function(resp) {
-      if (!resp.ok) {
-        return resp.text().then(function(t) { throw new Error('ORS ' + resp.status + ': ' + t); });
-      }
-      return resp.json();
-    })
-    .then(function(data) {
-      var now = Date.now();
-      var durations = data.durations[0]; // row 0 = from user
-      var distances = data.distances[0];
-
-      visible.forEach(function(p, i) {
-        var dur = durations[i + 1]; // +1 because index 0 is user-to-user
-        var dist = distances[i + 1];
-        if (dur != null && dist != null) {
-          routingCache[p.id] = {
-            duration: dur,
-            distance: dist,
-            timestamp: now
-          };
-          console.log('[Paris] ' + p.name + ': ' + Math.round(dist) + 'm, ' + Math.round(dur / 60) + ' min');
+    function processBatch() {
+      if (batchIndex >= visible.length) {
+        // Done
+        lastRoutingPos = { lat: userLat, lng: userLng };
+        routingInFlight = false;
+        if (fail > 0 && ok === 0) {
+          showRoutingStatus('Could not fetch walking times — will retry');
+        } else if (fail > 0) {
+          showRoutingStatus('Updated ' + ok + ' of ' + (ok + fail) + ' places');
+          setTimeout(function() { showRoutingStatus(''); }, 4000);
+        } else {
+          showRoutingStatus('');
+          console.log('[Paris] ✓ All ' + ok + ' routes updated');
         }
+        render();
+        return;
+      }
+
+      var batch = visible.slice(batchIndex, batchIndex + BATCH_SIZE);
+      batchIndex += BATCH_SIZE;
+
+      var promises = batch.map(function(p) {
+        return fetchOneRoute(p)
+          .then(function(result) {
+            routingCache[result.id] = {
+              distance: result.distance,
+              duration: result.duration,
+              timestamp: now
+            };
+            ok++;
+            console.log('[Paris] ' + p.name + ': ' + Math.round(result.distance) + 'm, ~' + Math.round(result.duration / 60) + ' min');
+          })
+          .catch(function(err) {
+            fail++;
+            console.warn('[Paris] Failed ' + p.name + ':', err.message);
+          });
       });
 
-      lastRoutingPos = { lat: userLat, lng: userLng };
-      showRoutingStatus('');
-      console.log('[Paris] All ' + visible.length + ' routes updated via ORS Matrix');
-      render();
-    })
-    .catch(function(err) {
-      console.warn('[Paris] ORS error:', err.message);
-      var cached = Object.keys(routingCache).length;
-      if (cached > 0) {
-        showRoutingStatus('Using cached walking times');
-      } else {
-        showRoutingStatus('Could not fetch walking times — will retry');
-      }
-      render();
-    })
-    .finally(function() {
-      routingInFlight = false;
-    });
+      Promise.all(promises).then(function() {
+        render(); // Progressive update
+        setTimeout(processBatch, BATCH_DELAY_MS);
+      });
+    }
+
+    processBatch();
   }
 
   function showRoutingStatus(msg) {
-    if (!msg) {
-      elRoutingStatus.classList.add('hidden');
-      return;
-    }
+    if (!msg) { elRoutingStatus.classList.add('hidden'); return; }
     elRoutingStatus.textContent = msg;
     elRoutingStatus.classList.remove('hidden');
   }
@@ -551,13 +499,8 @@
       var chip = e.target.closest('.filter-chip');
       if (!chip) return;
       var cat = chip.dataset.cat;
-      if (activeFilters.has(cat)) {
-        activeFilters.delete(cat);
-        chip.classList.remove('active');
-      } else {
-        activeFilters.add(cat);
-        chip.classList.add('active');
-      }
+      if (activeFilters.has(cat)) { activeFilters.delete(cat); chip.classList.remove('active'); }
+      else { activeFilters.add(cat); chip.classList.add('active'); }
       render();
       if (locationGranted && userLat != null) fetchRoutes();
     });
@@ -568,15 +511,11 @@
       render();
     });
     elSearchClear.addEventListener('click', function() {
-      elSearch.value = '';
-      searchQuery = '';
-      elSearchClear.classList.remove('visible');
-      render();
+      elSearch.value = ''; searchQuery = ''; elSearchClear.classList.remove('visible'); render();
     });
 
     $('#sort-btn').addEventListener('click', function(e) {
-      e.stopPropagation();
-      elSortDropdown.classList.toggle('hidden');
+      e.stopPropagation(); elSortDropdown.classList.toggle('hidden');
     });
     elSortDropdown.addEventListener('click', function(e) {
       var opt = e.target.closest('.sort-option');
@@ -596,16 +535,12 @@
         currentView = view;
         $$('.view-btn').forEach(function(b) { b.classList.remove('active'); });
         btn.classList.add('active');
-
         if (view === 'map') {
           elListView.classList.add('hidden');
           elMapView.classList.remove('hidden');
           if (!mapReady) initMap();
           setTimeout(function() { map.invalidateSize(); }, 100);
-          if (userLat != null) {
-            mapFollowUser = true;
-            map.setView([userLat, userLng], 14, { animate: true });
-          }
+          if (userLat != null) { mapFollowUser = true; map.setView([userLat, userLng], 14, { animate: true }); }
         } else {
           elMapView.classList.add('hidden');
           elListView.classList.remove('hidden');
@@ -616,13 +551,8 @@
 
     $('#location-btn').addEventListener('click', function() {
       if (locationGranted && userLat != null) {
-        if (currentView === 'map' && map) {
-          mapFollowUser = true;
-          map.setView([userLat, userLng], 15, { animate: true });
-        }
-      } else {
-        startLocation();
-      }
+        if (currentView === 'map' && map) { mapFollowUser = true; map.setView([userLat, userLng], 15, { animate: true }); }
+      } else { startLocation(); }
     });
 
     var enableBtn = $('#enable-location-btn');
@@ -638,21 +568,17 @@
         }
         return;
       }
-
       var mapBtn = e.target.closest('[data-action="show-map"]');
       if (mapBtn) {
         var placeId = mapBtn.dataset.id;
         var place = places.find(function(p) { return p.id === placeId; });
         if (place) showPlaceOnMap(place);
-        return;
       }
     });
 
     var clearBtn = $('#clear-filters-btn');
     if (clearBtn) clearBtn.addEventListener('click', function() {
-      activeFilters.clear();
-      searchQuery = '';
-      elSearch.value = '';
+      activeFilters.clear(); searchQuery = ''; elSearch.value = '';
       elSearchClear.classList.remove('visible');
       $$('.filter-chip').forEach(function(c) { c.classList.remove('active'); });
       render();
@@ -672,21 +598,17 @@
     $('[data-view="map"]').classList.add('active');
     elListView.classList.add('hidden');
     elMapView.classList.remove('hidden');
-
     if (!mapReady) initMap();
     setTimeout(function() {
       map.invalidateSize();
       mapFollowUser = false;
       map.setView([place.latitude, place.longitude], 16, { animate: true });
-
       var filtered = getFilteredPlaces();
       var idx = -1;
       for (var i = 0; i < filtered.length; i++) {
         if (filtered[i].id === place.id) { idx = i; break; }
       }
-      if (idx >= 0 && placeMarkers[idx]) {
-        showMapPopup(place, placeMarkers[idx]);
-      }
+      if (idx >= 0 && placeMarkers[idx]) showMapPopup(place, placeMarkers[idx]);
     }, 150);
   }
 
@@ -696,7 +618,8 @@
 
   function getGoogleMapsUrl(place) {
     if (userLat != null) {
-      return 'https://www.google.com/maps/dir/?api=1&origin=' + userLat + ',' + userLng + '&destination=' + encodeURIComponent(place.google_maps_query || place.name + ', Paris') + '&travelmode=walking';
+      return 'https://www.google.com/maps/dir/?api=1&origin=' + userLat + ',' + userLng +
+        '&destination=' + encodeURIComponent(place.google_maps_query || place.name + ', Paris') + '&travelmode=walking';
     }
     return 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(place.google_maps_query || place.name + ', Paris');
   }
@@ -727,7 +650,7 @@
     var R = 6371000;
     var dLat = (lat2 - lat1) * Math.PI / 180;
     var dLon = (lon2 - lon1) * Math.PI / 180;
-    var a = Math.sin(dLat / 2) * Math.sin(dLat / 2) + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    var a = Math.sin(dLat/2) * Math.sin(dLat/2) + Math.cos(lat1*Math.PI/180) * Math.cos(lat2*Math.PI/180) * Math.sin(dLon/2) * Math.sin(dLon/2);
     return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   }
 
@@ -738,7 +661,5 @@
     return d.innerHTML;
   }
 
-  // ── Boot ──
   document.addEventListener('DOMContentLoaded', init);
-
 })();
