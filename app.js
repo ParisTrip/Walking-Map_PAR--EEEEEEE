@@ -1,12 +1,20 @@
 /* ════════════════════════════════════════════════
-   Paris Trip Companion — app.js v2.1
+   Paris Trip Companion — app.js v3.0
+   Uses OpenRouteService Matrix API for accurate
+   walking distances and times.
    ════════════════════════════════════════════════ */
 
 (function () {
   'use strict';
 
-  // ── Category config (add new ones here and in data) ──
-  const CATEGORY_META = {
+  // ┌──────────────────────────────────────────────┐
+  // │  PASTE YOUR FREE API KEY BELOW               │
+  // │  Get one at: openrouteservice.org/dev/#/signup│
+  // └──────────────────────────────────────────────┘
+  var ORS_API_KEY = 'eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6ImJlZTFkZTEwYTkzOTQwYThhOTZjM2ZlOTFlZmIzNGU2IiwiaCI6Im11cm11cjY0In0=';
+
+  // ── Category config ──
+  var CATEGORY_META = {
     'sights':       { label: 'Sights',       icon: '🏛️' },
     'museums':      { label: 'Museums',      icon: '🎨' },
     'bakeries':     { label: 'Bakeries',     icon: '🥐' },
@@ -21,88 +29,94 @@
   };
 
   // ── State ──
-  let places = [];
-  let activeFilters = new Set();
-  let searchQuery = '';
-  let currentSort = 'walking-time';
-  let currentView = 'list';
-  let userLat = null;
-  let userLng = null;
-  let locationWatchId = null;
-  let locationGranted = false;
-  let routingCache = {};
-  let lastRoutingPos = null;
-  let routingInFlight = false;
-  let routingTimer = null;
-  let map = null;
-  let mapReady = false;
-  let userMarker = null;
-  let userPulse = null;
-  let placeMarkers = [];
-  let mapFollowUser = true;
-  let headerHeight = 0;
+  var places = [];
+  var activeFilters = new Set();
+  var searchQuery = '';
+  var currentSort = 'walking-time';
+  var currentView = 'list';
+  var userLat = null;
+  var userLng = null;
+  var locationWatchId = null;
+  var locationGranted = false;
+  var routingCache = {};
+  var lastRoutingPos = null;
+  var routingInFlight = false;
+  var routingTimer = null;
+  var map = null;
+  var mapReady = false;
+  var userMarker = null;
+  var userPulse = null;
+  var placeMarkers = [];
+  var mapFollowUser = true;
+  var headerHeight = 0;
 
   // ── Routing Config ──
-  // Uses OSRM Route API for accurate street-routed distances.
-  // Walking time calculated at 1.0 m/s = 3.6 km/h (family pace, matches Google Maps).
-  const OSRM_ROUTE = 'https://router.project-osrm.org/route/v1/foot';
-  const WALK_SPEED_MS = 1.0;
-  const ROUTING_MOVE_THRESHOLD = 80;
-  const ROUTING_INTERVAL = 60000;
-  const ROUTING_STALE_MS = 180000;
-  const BATCH_SIZE = 5;
-  const BATCH_DELAY_MS = 400;
+  var ORS_MATRIX = 'https://api.openrouteservice.org/v2/matrix/foot-walking';
+  var ROUTING_MOVE_THRESHOLD = 80;   // meters before re-routing
+  var ROUTING_INTERVAL = 60000;      // auto-refresh every 60s
+  var ROUTING_STALE_MS = 180000;     // show stale indicator after 3 min
+  var ORS_MATRIX_LIMIT = 50;         // ORS limit per matrix call (free tier)
+  // Google Maps walking speed is roughly 4.5-5 km/h. ORS returns realistic
+  // walking durations so we use those directly instead of calculating our own.
 
   // ── DOM refs ──
-  const $ = (sel) => document.querySelector(sel);
-  const $$ = (sel) => document.querySelectorAll(sel);
+  var $ = function(sel) { return document.querySelector(sel); };
+  var $$ = function(sel) { return document.querySelectorAll(sel); };
 
-  const elList = $('#place-list');
-  const elEmpty = $('#empty-state');
-  const elCount = $('#results-count');
-  const elSearch = $('#search-input');
-  const elSearchClear = $('#search-clear');
-  const elFiltersTrack = $('#filters-track');
-  const elSortDropdown = $('#sort-dropdown');
-  const elLocationPrompt = $('#location-prompt');
-  const elRoutingStatus = $('#routing-status');
-  const elMapView = $('#map-view');
-  const elListView = $('#list-view');
-  const elMapDetail = $('#map-detail');
-  const elMapDetailContent = $('#map-detail-content');
+  var elList = $('#place-list');
+  var elEmpty = $('#empty-state');
+  var elCount = $('#results-count');
+  var elSearch = $('#search-input');
+  var elSearchClear = $('#search-clear');
+  var elFiltersTrack = $('#filters-track');
+  var elSortDropdown = $('#sort-dropdown');
+  var elLocationPrompt = $('#location-prompt');
+  var elRoutingStatus = $('#routing-status');
+  var elMapView = $('#map-view');
+  var elListView = $('#list-view');
+  var elMapDetail = $('#map-detail');
+  var elMapDetailContent = $('#map-detail-content');
 
   // ════════════════════════════════════════════════
   //  INIT
   // ════════════════════════════════════════════════
 
-  async function init() {
-    console.log('[Paris v2.1] Initializing…');
-    showSkeletons();
-    try {
-      const resp = await fetch('approved_places.json?v=21');
-      places = await resp.json();
-      console.log('[Paris] Loaded ' + places.length + ' places');
-    } catch (e) {
-      elList.innerHTML = '<p style="padding:20px;color:#A89F94;">Could not load places data.</p>';
-      return;
+  function init() {
+    console.log('[Paris v3.0] Initializing — ORS Matrix routing');
+    if (ORS_API_KEY === 'PASTE_YOUR_KEY_HERE') {
+      console.warn('[Paris] ⚠️ No API key set! Paste your free OpenRouteService key in app.js');
     }
+    showSkeletons();
 
-    buildFilters();
-    measureHeader();
-    render();
-    bindEvents();
+    fetch('approved_places.json?v=30')
+      .then(function(resp) { return resp.json(); })
+      .then(function(data) {
+        places = data;
+        console.log('[Paris] Loaded ' + places.length + ' places');
+        buildFilters();
+        measureHeader();
+        render();
+        bindEvents();
+        checkLocationPermission();
+      })
+      .catch(function(e) {
+        elList.innerHTML = '<p style="padding:20px;color:#A89F94;">Could not load places data.</p>';
+      });
+  }
 
+  function checkLocationPermission() {
     if (navigator.permissions && navigator.permissions.query) {
-      try {
-        const perm = await navigator.permissions.query({ name: 'geolocation' });
-        if (perm.state === 'granted') {
-          startLocation();
-        } else {
+      navigator.permissions.query({ name: 'geolocation' })
+        .then(function(perm) {
+          if (perm.state === 'granted') {
+            startLocation();
+          } else {
+            showLocationPrompt();
+          }
+        })
+        .catch(function() {
           showLocationPrompt();
-        }
-      } catch (e2) {
-        showLocationPrompt();
-      }
+        });
     } else {
       showLocationPrompt();
     }
@@ -411,12 +425,12 @@
     }
 
     if (moved) {
-      fetchAllRoutes();
+      fetchRoutes();
     }
 
     if (!routingTimer) {
       routingTimer = setInterval(function() {
-        if (locationGranted && userLat != null) fetchAllRoutes();
+        if (locationGranted && userLat != null) fetchRoutes();
       }, ROUTING_INTERVAL);
     }
   }
@@ -432,38 +446,17 @@
   }
 
   // ════════════════════════════════════════════════
-  //  OSRM ROUTE API — Accurate Walking Routes
+  //  OPENROUTESERVICE MATRIX API
+  //  One request → distances & durations for all places
   // ════════════════════════════════════════════════
 
-  function fetchOneRoute(place) {
-    var url = OSRM_ROUTE + '/' + userLng + ',' + userLat + ';' + place.longitude + ',' + place.latitude + '?overview=false&alternatives=false';
-
-    console.log('[Paris] Fetching route for ' + place.name + ': ' + url);
-
-    return fetch(url)
-      .then(function(resp) {
-        if (!resp.ok) throw new Error('HTTP ' + resp.status);
-        return resp.json();
-      })
-      .then(function(data) {
-        if (data.code !== 'Ok' || !data.routes || data.routes.length === 0) {
-          throw new Error('No route returned');
-        }
-
-        var route = data.routes[0];
-        // route.distance = actual routed walking distance in meters
-        var routedDistance = route.distance;
-        // Calculate time at family walking pace (1.0 m/s = 3.6 km/h)
-        var duration = routedDistance / WALK_SPEED_MS;
-
-        console.log('[Paris] ' + place.name + ': OSRM distance=' + Math.round(routedDistance) + 'm, calculated time=' + Math.round(duration/60) + 'min');
-
-        return { id: place.id, distance: routedDistance, duration: duration };
-      });
-  }
-
-  function fetchAllRoutes() {
+  function fetchRoutes() {
     if (userLat == null || routingInFlight) return;
+    if (ORS_API_KEY === 'PASTE_YOUR_KEY_HERE') {
+      console.warn('[Paris] No API key — skipping routing. Get a free key at openrouteservice.org');
+      showRoutingStatus('API key needed — see README');
+      return;
+    }
 
     var visible = getFilteredPlaces();
     if (visible.length === 0) return;
@@ -471,58 +464,73 @@
     routingInFlight = true;
     showRoutingStatus('Updating walking times…');
 
-    var now = Date.now();
-    var ok = 0;
-    var fail = 0;
+    // ORS Matrix: locations[0] = user, locations[1..n] = destinations
+    // sources=[0] means "route from index 0 to all others"
+    var locations = [[userLng, userLat]];
+    visible.forEach(function(p) {
+      locations.push([p.longitude, p.latitude]);
+    });
 
-    // Process in sequential batches
-    var batchIndex = 0;
+    // ORS free tier allows up to 50 locations per matrix call
+    // With 44 places + 1 source = 45, we're fine in one call
+    var body = {
+      locations: locations,
+      sources: [0],
+      metrics: ['distance', 'duration']
+    };
 
-    function processBatch() {
-      if (batchIndex >= visible.length) {
-        // All done
-        lastRoutingPos = { lat: userLat, lng: userLng };
-        routingInFlight = false;
+    console.log('[Paris] Fetching ORS matrix for ' + visible.length + ' places…');
 
-        if (fail > 0 && ok === 0) {
-          showRoutingStatus('Could not fetch walking times — will retry');
-        } else if (fail > 0) {
-          showRoutingStatus('Updated ' + ok + ' of ' + (ok + fail) + ' places');
-          setTimeout(function() { showRoutingStatus(''); }, 4000);
-        } else {
-          showRoutingStatus('');
-          console.log('[Paris] All ' + ok + ' routes updated successfully');
-        }
-        render();
-        return;
+    fetch(ORS_MATRIX, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': ORS_API_KEY
+      },
+      body: JSON.stringify(body)
+    })
+    .then(function(resp) {
+      if (!resp.ok) {
+        return resp.text().then(function(t) { throw new Error('ORS ' + resp.status + ': ' + t); });
       }
+      return resp.json();
+    })
+    .then(function(data) {
+      var now = Date.now();
+      var durations = data.durations[0]; // row 0 = from user
+      var distances = data.distances[0];
 
-      var batch = visible.slice(batchIndex, batchIndex + BATCH_SIZE);
-      batchIndex += BATCH_SIZE;
-
-      var promises = batch.map(function(p) {
-        return fetchOneRoute(p)
-          .then(function(result) {
-            routingCache[result.id] = {
-              distance: result.distance,
-              duration: result.duration,
-              timestamp: now
-            };
-            ok++;
-          })
-          .catch(function(err) {
-            fail++;
-            console.warn('[Paris] Route failed for ' + p.name + ':', err.message);
-          });
+      visible.forEach(function(p, i) {
+        var dur = durations[i + 1]; // +1 because index 0 is user-to-user
+        var dist = distances[i + 1];
+        if (dur != null && dist != null) {
+          routingCache[p.id] = {
+            duration: dur,
+            distance: dist,
+            timestamp: now
+          };
+          console.log('[Paris] ' + p.name + ': ' + Math.round(dist) + 'm, ' + Math.round(dur / 60) + ' min');
+        }
       });
 
-      Promise.all(promises).then(function() {
-        render(); // Progressive update
-        setTimeout(processBatch, BATCH_DELAY_MS);
-      });
-    }
-
-    processBatch();
+      lastRoutingPos = { lat: userLat, lng: userLng };
+      showRoutingStatus('');
+      console.log('[Paris] All ' + visible.length + ' routes updated via ORS Matrix');
+      render();
+    })
+    .catch(function(err) {
+      console.warn('[Paris] ORS error:', err.message);
+      var cached = Object.keys(routingCache).length;
+      if (cached > 0) {
+        showRoutingStatus('Using cached walking times');
+      } else {
+        showRoutingStatus('Could not fetch walking times — will retry');
+      }
+      render();
+    })
+    .finally(function() {
+      routingInFlight = false;
+    });
   }
 
   function showRoutingStatus(msg) {
@@ -551,7 +559,7 @@
         chip.classList.add('active');
       }
       render();
-      if (locationGranted && userLat != null) fetchAllRoutes();
+      if (locationGranted && userLat != null) fetchRoutes();
     });
 
     elSearch.addEventListener('input', function() {
@@ -719,7 +727,7 @@
     var R = 6371000;
     var dLat = (lat2 - lat1) * Math.PI / 180;
     var dLon = (lon2 - lon1) * Math.PI / 180;
-    var a = Math.sin(dLat/2) * Math.sin(dLat/2) + Math.cos(lat1 * Math.PI/180) * Math.cos(lat2 * Math.PI/180) * Math.sin(dLon/2) * Math.sin(dLon/2);
+    var a = Math.sin(dLat / 2) * Math.sin(dLat / 2) + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
     return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   }
 
