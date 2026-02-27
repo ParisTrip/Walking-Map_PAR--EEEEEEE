@@ -1,5 +1,5 @@
 /* ════════════════════════════════════════════════
-   Paris Trip Companion — app.js
+   Paris Trip Companion — app.js v2.1
    ════════════════════════════════════════════════ */
 
 (function () {
@@ -30,7 +30,7 @@
   let userLng = null;
   let locationWatchId = null;
   let locationGranted = false;
-  let routingCache = {};        // id -> { duration, distance, timestamp }
+  let routingCache = {};
   let lastRoutingPos = null;
   let routingInFlight = false;
   let routingTimer = null;
@@ -42,13 +42,16 @@
   let mapFollowUser = true;
   let headerHeight = 0;
 
-  // ── OSRM Config ──
-  const OSRM_ROUTE_BASE = 'https://router.project-osrm.org/route/v1/foot';
-  const ROUTING_MOVE_THRESHOLD = 80;   // meters before re-routing
-  const ROUTING_INTERVAL = 45000;      // auto-refresh ms
-  const ROUTING_STALE_MS = 120000;     // show "last updated" after this
-  const ROUTE_BATCH_SIZE = 6;          // requests per batch
-  const ROUTE_BATCH_DELAY = 300;       // ms between batches
+  // ── Routing Config ──
+  // Uses OSRM Route API for accurate street-routed distances.
+  // Walking time calculated at 1.0 m/s = 3.6 km/h (family pace, matches Google Maps).
+  const OSRM_ROUTE = 'https://router.project-osrm.org/route/v1/foot';
+  const WALK_SPEED_MS = 1.0;
+  const ROUTING_MOVE_THRESHOLD = 80;
+  const ROUTING_INTERVAL = 60000;
+  const ROUTING_STALE_MS = 180000;
+  const BATCH_SIZE = 5;
+  const BATCH_DELAY_MS = 400;
 
   // ── DOM refs ──
   const $ = (sel) => document.querySelector(sel);
@@ -73,10 +76,12 @@
   // ════════════════════════════════════════════════
 
   async function init() {
+    console.log('[Paris v2.1] Initializing…');
     showSkeletons();
     try {
-      const resp = await fetch('approved_places.json');
+      const resp = await fetch('approved_places.json?v=21');
       places = await resp.json();
+      console.log('[Paris] Loaded ' + places.length + ' places');
     } catch (e) {
       elList.innerHTML = '<p style="padding:20px;color:#A89F94;">Could not load places data.</p>';
       return;
@@ -87,7 +92,6 @@
     render();
     bindEvents();
 
-    // Check if location was previously granted
     if (navigator.permissions && navigator.permissions.query) {
       try {
         const perm = await navigator.permissions.query({ name: 'geolocation' });
@@ -96,7 +100,7 @@
         } else {
           showLocationPrompt();
         }
-      } catch {
+      } catch (e2) {
         showLocationPrompt();
       }
     } else {
@@ -104,18 +108,16 @@
     }
   }
 
-  // ── Skeleton loading ──
   function showSkeletons() {
-    let html = '';
-    for (let i = 0; i < 6; i++) {
+    var html = '';
+    for (var i = 0; i < 6; i++) {
       html += '<div class="skeleton-card"><div class="skeleton-line"></div><div class="skeleton-line"></div><div class="skeleton-line"></div><div class="skeleton-line"></div></div>';
     }
     elList.innerHTML = html;
   }
 
-  // ── Measure header for layout offset ──
   function measureHeader() {
-    const h = $('#app-header').offsetHeight;
+    var h = $('#app-header').offsetHeight;
     headerHeight = h;
     document.documentElement.style.setProperty('--header-h', h + 'px');
   }
@@ -125,25 +127,23 @@
   // ════════════════════════════════════════════════
 
   function buildFilters() {
-    // Discover categories from data
-    const catCounts = {};
-    places.forEach(p => {
-      (p.category_tags || []).forEach(c => {
+    var catCounts = {};
+    places.forEach(function(p) {
+      (p.category_tags || []).forEach(function(c) {
         catCounts[c] = (catCounts[c] || 0) + 1;
       });
     });
 
-    let html = '';
-    Object.keys(CATEGORY_META).forEach(key => {
+    var html = '';
+    Object.keys(CATEGORY_META).forEach(function(key) {
       if (!catCounts[key]) return;
-      const meta = CATEGORY_META[key];
-      html += `<button class="filter-chip" data-cat="${key}">${meta.icon} ${meta.label} <span class="chip-count">${catCounts[key]}</span></button>`;
+      var meta = CATEGORY_META[key];
+      html += '<button class="filter-chip" data-cat="' + key + '">' + meta.icon + ' ' + meta.label + ' <span class="chip-count">' + catCounts[key] + '</span></button>';
     });
-    // Any categories in data not in CATEGORY_META
-    Object.keys(catCounts).forEach(key => {
+    Object.keys(catCounts).forEach(function(key) {
       if (CATEGORY_META[key]) return;
-      const label = key.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-      html += `<button class="filter-chip" data-cat="${key}">${label} <span class="chip-count">${catCounts[key]}</span></button>`;
+      var label = key.replace(/-/g, ' ').replace(/\b\w/g, function(l) { return l.toUpperCase(); });
+      html += '<button class="filter-chip" data-cat="' + key + '">' + label + ' <span class="chip-count">' + catCounts[key] + '</span></button>';
     });
     elFiltersTrack.innerHTML = html;
   }
@@ -153,47 +153,39 @@
   // ════════════════════════════════════════════════
 
   function getFilteredPlaces() {
-    let list = places;
+    var list = places;
 
-    // Category filter (OR within categories)
     if (activeFilters.size > 0) {
-      list = list.filter(p =>
-        (p.category_tags || []).some(t => activeFilters.has(t))
-      );
-    }
-
-    // Text search
-    if (searchQuery) {
-      const q = searchQuery.toLowerCase();
-      list = list.filter(p => {
-        const haystack = [
-          p.name, p.normalized_name, p.short_description, p.more_notes,
-          ...(p.category_tags || [])
-        ].join(' ').toLowerCase();
-        return haystack.includes(q);
+      list = list.filter(function(p) {
+        return (p.category_tags || []).some(function(t) { return activeFilters.has(t); });
       });
     }
 
-    // Sort
-    list = [...list];
-    switch (currentSort) {
-      case 'walking-time':
-        list.sort((a, b) => {
-          const da = routingCache[a.id]?.duration ?? Infinity;
-          const db = routingCache[b.id]?.duration ?? Infinity;
-          return da - db;
-        });
-        break;
-      case 'walking-distance':
-        list.sort((a, b) => {
-          const da = routingCache[a.id]?.distance ?? Infinity;
-          const db = routingCache[b.id]?.distance ?? Infinity;
-          return da - db;
-        });
-        break;
-      case 'name':
-        list.sort((a, b) => a.name.localeCompare(b.name));
-        break;
+    if (searchQuery) {
+      var q = searchQuery.toLowerCase();
+      list = list.filter(function(p) {
+        var haystack = [
+          p.name, p.normalized_name, p.short_description, p.more_notes
+        ].concat(p.category_tags || []).join(' ').toLowerCase();
+        return haystack.indexOf(q) !== -1;
+      });
+    }
+
+    list = list.slice();
+    if (currentSort === 'walking-time') {
+      list.sort(function(a, b) {
+        var da = routingCache[a.id] ? routingCache[a.id].duration : Infinity;
+        var db = routingCache[b.id] ? routingCache[b.id].duration : Infinity;
+        return da - db;
+      });
+    } else if (currentSort === 'walking-distance') {
+      list.sort(function(a, b) {
+        var da = routingCache[a.id] ? routingCache[a.id].distance : Infinity;
+        var db = routingCache[b.id] ? routingCache[b.id].distance : Infinity;
+        return da - db;
+      });
+    } else if (currentSort === 'name') {
+      list.sort(function(a, b) { return a.name.localeCompare(b.name); });
     }
     return list;
   }
@@ -203,7 +195,7 @@
   // ════════════════════════════════════════════════
 
   function render() {
-    const filtered = getFilteredPlaces();
+    var filtered = getFilteredPlaces();
 
     if (filtered.length === 0) {
       elList.innerHTML = '';
@@ -211,7 +203,7 @@
       elCount.textContent = '';
     } else {
       elEmpty.classList.add('hidden');
-      elCount.textContent = `${filtered.length} place${filtered.length !== 1 ? 's' : ''}`;
+      elCount.textContent = filtered.length + ' place' + (filtered.length !== 1 ? 's' : '');
       renderList(filtered);
     }
 
@@ -219,49 +211,46 @@
   }
 
   function renderList(list) {
-    const now = Date.now();
-    let html = '';
+    var now = Date.now();
+    var html = '';
 
-    list.forEach(p => {
-      const rc = routingCache[p.id];
-      const hasRouting = rc && rc.duration != null;
-      const isStale = hasRouting && (now - rc.timestamp > ROUTING_STALE_MS);
-      const timeStr = hasRouting ? formatDuration(rc.duration) : '';
-      const distStr = hasRouting ? formatDistance(rc.distance) : '';
-      const staleStr = isStale ? `<span class="stale-indicator">~${formatTimeAgo(rc.timestamp)}</span>` : '';
-      const gmapsUrl = getGoogleMapsUrl(p);
-      const tags = (p.category_tags || []).map(t => {
-        const meta = CATEGORY_META[t];
-        const label = meta ? meta.label : t.replace(/-/g, ' ');
-        return `<span class="card-tag">${label}</span>`;
+    list.forEach(function(p) {
+      var rc = routingCache[p.id];
+      var hasRouting = rc && rc.duration != null;
+      var isStale = hasRouting && (now - rc.timestamp > ROUTING_STALE_MS);
+      var timeStr = hasRouting ? '~' + formatDuration(rc.duration) : '';
+      var distStr = hasRouting ? formatDistance(rc.distance) : '';
+      var staleStr = isStale ? '<span class="stale-indicator">updated ' + formatTimeAgo(rc.timestamp) + '</span>' : '';
+      var gmapsUrl = getGoogleMapsUrl(p);
+      var tags = (p.category_tags || []).map(function(t) {
+        var meta = CATEGORY_META[t];
+        var label = meta ? meta.label : t.replace(/-/g, ' ');
+        return '<span class="card-tag">' + label + '</span>';
       }).join('');
 
-      html += `
-        <div class="place-card" data-id="${p.id}">
-          <div class="card-header">
-            <div class="card-name">${esc(p.name)}</div>
-            ${hasRouting || locationGranted ? `
-            <div class="card-distance">
-              ${hasRouting ? `<div class="card-time">${timeStr}</div><div class="card-meters">${distStr}</div>${staleStr}` : '<div class="card-meters" style="color:var(--text-muted);">Calculating…</div>'}
-            </div>` : ''}
-          </div>
-          <div class="card-tags">${tags}</div>
-          <div class="card-desc">${esc(p.short_description)}</div>
-          ${p.more_notes ? `
-            <button class="card-more-toggle" data-target="notes-${p.id}">More details ▾</button>
-            <div class="card-more-notes" id="notes-${p.id}">${esc(p.more_notes)}</div>
-          ` : ''}
-          <div class="card-actions">
-            <button class="card-btn card-btn-map" data-action="show-map" data-id="${p.id}">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/></svg>
-              Map
-            </button>
-            <a class="card-btn card-btn-nav" href="${gmapsUrl}" target="_blank" rel="noopener">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l19-9-9 19-2-8-8-2z"/></svg>
-              Directions
-            </a>
-          </div>
-        </div>`;
+      html += '<div class="place-card" data-id="' + p.id + '">' +
+        '<div class="card-header">' +
+          '<div class="card-name">' + esc(p.name) + '</div>' +
+          (hasRouting || locationGranted ?
+            '<div class="card-distance">' +
+              (hasRouting ?
+                '<div class="card-time">' + timeStr + '</div><div class="card-meters">' + distStr + '</div>' + staleStr
+                : '<div class="card-meters" style="color:var(--text-muted);">Calculating…</div>') +
+            '</div>' : '') +
+        '</div>' +
+        '<div class="card-tags">' + tags + '</div>' +
+        '<div class="card-desc">' + esc(p.short_description) + '</div>' +
+        (p.more_notes ?
+          '<button class="card-more-toggle" data-target="notes-' + p.id + '">More details ▾</button>' +
+          '<div class="card-more-notes" id="notes-' + p.id + '">' + esc(p.more_notes) + '</div>'
+          : '') +
+        '<div class="card-actions">' +
+          '<button class="card-btn card-btn-map" data-action="show-map" data-id="' + p.id + '">' +
+            '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/></svg> Map</button>' +
+          '<a class="card-btn card-btn-nav" href="' + gmapsUrl + '" target="_blank" rel="noopener">' +
+            '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l19-9-9 19-2-8-8-2z"/></svg> Directions</a>' +
+        '</div>' +
+      '</div>';
     });
 
     elList.innerHTML = html;
@@ -283,24 +272,22 @@
 
     L.control.zoom({ position: 'topright' }).addTo(map);
     L.control.attribution({ position: 'bottomright', prefix: false })
-      .addAttribution('© <a href="https://openstreetmap.org">OSM</a>')
+      .addAttribution('&copy; <a href="https://openstreetmap.org">OSM</a>')
       .addTo(map);
 
-    // Warm, elegant tile style
     L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
       maxZoom: 19,
       subdomains: 'abcd',
     }).addTo(map);
 
-    map.on('movestart', () => { mapFollowUser = false; });
+    map.on('movestart', function() { mapFollowUser = false; });
 
     mapReady = true;
 
     if (userLat != null) addUserMarker();
     renderMapMarkers(getFilteredPlaces());
 
-    // Delay to let tile rendering settle
-    setTimeout(() => map.invalidateSize(), 200);
+    setTimeout(function() { map.invalidateSize(); }, 200);
   }
 
   function addUserMarker() {
@@ -309,8 +296,8 @@
     if (userPulse) map.removeLayer(userPulse);
     if (userMarker) map.removeLayer(userMarker);
 
-    const pulseIcon = L.divIcon({ className: '', html: '<div class="user-marker-pulse"></div>', iconSize: [40, 40], iconAnchor: [20, 20] });
-    const userIcon = L.divIcon({ className: '', html: '<div class="user-marker"></div>', iconSize: [16, 16], iconAnchor: [8, 8] });
+    var pulseIcon = L.divIcon({ className: '', html: '<div class="user-marker-pulse"></div>', iconSize: [40, 40], iconAnchor: [20, 20] });
+    var userIcon = L.divIcon({ className: '', html: '<div class="user-marker"></div>', iconSize: [16, 16], iconAnchor: [8, 8] });
 
     userPulse = L.marker([userLat, userLng], { icon: pulseIcon, interactive: false, zIndexOffset: 500 }).addTo(map);
     userMarker = L.marker([userLat, userLng], { icon: userIcon, interactive: false, zIndexOffset: 600 }).addTo(map);
@@ -328,52 +315,55 @@
   function renderMapMarkers(list) {
     if (!map) return;
 
-    // Clear old
-    placeMarkers.forEach(m => map.removeLayer(m));
+    placeMarkers.forEach(function(m) { map.removeLayer(m); });
     placeMarkers = [];
 
-    list.forEach(p => {
-      const catIcon = (p.category_tags || []).map(t => CATEGORY_META[t]?.icon).find(Boolean) || '📍';
-      const icon = L.divIcon({
+    list.forEach(function(p) {
+      var catIcon = '📍';
+      (p.category_tags || []).some(function(t) {
+        if (CATEGORY_META[t]) { catIcon = CATEGORY_META[t].icon; return true; }
+        return false;
+      });
+      var icon = L.divIcon({
         className: '',
-        html: `<div class="custom-marker"><span class="custom-marker-inner">${catIcon}</span></div>`,
+        html: '<div class="custom-marker"><span class="custom-marker-inner">' + catIcon + '</span></div>',
         iconSize: [32, 32],
         iconAnchor: [16, 32],
         popupAnchor: [0, -34],
       });
 
-      const marker = L.marker([p.latitude, p.longitude], { icon }).addTo(map);
-
-      marker.on('click', () => showMapPopup(p, marker));
+      var marker = L.marker([p.latitude, p.longitude], { icon: icon }).addTo(map);
+      marker.on('click', function() { showMapPopup(p, marker); });
       placeMarkers.push(marker);
     });
   }
 
   function showMapPopup(p, marker) {
-    const rc = routingCache[p.id];
-    const hasRouting = rc && rc.duration != null;
-    const gmapsUrl = getGoogleMapsUrl(p);
-    const tags = (p.category_tags || []).map(t => {
-      const meta = CATEGORY_META[t];
-      const label = meta ? meta.label : t;
-      return `<span class="card-tag">${label}</span>`;
+    var rc = routingCache[p.id];
+    var hasRouting = rc && rc.duration != null;
+    var gmapsUrl = getGoogleMapsUrl(p);
+    var tags = (p.category_tags || []).map(function(t) {
+      var meta = CATEGORY_META[t];
+      var label = meta ? meta.label : t;
+      return '<span class="card-tag">' + label + '</span>';
     }).join('');
 
-    const content = `
-      <div class="popup-inner">
-        <div class="popup-name">${esc(p.name)}</div>
-        <div class="popup-tags">${tags}</div>
-        <div class="popup-desc">${esc(p.short_description)}</div>
-        ${hasRouting ? `
-        <div class="popup-stats">
-          <div class="popup-stat"><span class="popup-stat-val">${formatDuration(rc.duration)}</span> walk</div>
-          <div class="popup-stat"><span class="popup-stat-val">${formatDistance(rc.distance)}</span></div>
-        </div>` : ''}
-        <a class="popup-nav-btn" href="${gmapsUrl}" target="_blank" rel="noopener">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l19-9-9 19-2-8-8-2z"/></svg>
-          Open in Google Maps
-        </a>
-      </div>`;
+    var statsHtml = '';
+    if (hasRouting) {
+      statsHtml = '<div class="popup-stats">' +
+        '<div class="popup-stat"><span class="popup-stat-val">~' + formatDuration(rc.duration) + '</span> walk</div>' +
+        '<div class="popup-stat"><span class="popup-stat-val">' + formatDistance(rc.distance) + '</span></div>' +
+      '</div>';
+    }
+
+    var content = '<div class="popup-inner">' +
+      '<div class="popup-name">' + esc(p.name) + '</div>' +
+      '<div class="popup-tags">' + tags + '</div>' +
+      '<div class="popup-desc">' + esc(p.short_description) + '</div>' +
+      statsHtml +
+      '<a class="popup-nav-btn" href="' + gmapsUrl + '" target="_blank" rel="noopener">' +
+        '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l19-9-9 19-2-8-8-2z"/></svg> Open in Google Maps</a>' +
+    '</div>';
 
     marker.bindPopup(content, { maxWidth: 280, closeButton: true }).openPopup();
   }
@@ -397,7 +387,6 @@
     elLocationPrompt.classList.add('hidden');
     $('#location-btn').classList.add('active');
 
-    // High-accuracy watch
     locationWatchId = navigator.geolocation.watchPosition(
       onLocationUpdate,
       onLocationError,
@@ -407,13 +396,14 @@
   }
 
   function onLocationUpdate(pos) {
-    const newLat = pos.coords.latitude;
-    const newLng = pos.coords.longitude;
+    var newLat = pos.coords.latitude;
+    var newLng = pos.coords.longitude;
 
-    const moved = userLat == null || haversine(userLat, userLng, newLat, newLng) > ROUTING_MOVE_THRESHOLD;
+    var moved = userLat == null || haversine(userLat, userLng, newLat, newLng) > ROUTING_MOVE_THRESHOLD;
 
     userLat = newLat;
     userLng = newLng;
+    console.log('[Paris] Location: ' + userLat.toFixed(5) + ', ' + userLng.toFixed(5));
 
     if (mapReady) {
       addUserMarker();
@@ -421,21 +411,19 @@
     }
 
     if (moved) {
-      fetchRouting();
+      fetchAllRoutes();
     }
 
-    // Start periodic routing refresh
     if (!routingTimer) {
-      routingTimer = setInterval(() => {
-        if (locationGranted && userLat != null) fetchRouting();
+      routingTimer = setInterval(function() {
+        if (locationGranted && userLat != null) fetchAllRoutes();
       }, ROUTING_INTERVAL);
     }
   }
 
   function onLocationError(err) {
-    console.warn('Location error:', err.message);
+    console.warn('[Paris] Location error:', err.message);
     if (err.code === 1) {
-      // Permission denied
       elLocationPrompt.innerHTML = '<p>Location access was denied. You can still browse the guide! Tap the location button to try again.</p>';
       elLocationPrompt.classList.remove('hidden');
       $('#location-btn').classList.remove('active');
@@ -444,80 +432,97 @@
   }
 
   // ════════════════════════════════════════════════
-  //  OSRM ROUTING
+  //  OSRM ROUTE API — Accurate Walking Routes
   // ════════════════════════════════════════════════
 
-  async function fetchRouting() {
+  function fetchOneRoute(place) {
+    var url = OSRM_ROUTE + '/' + userLng + ',' + userLat + ';' + place.longitude + ',' + place.latitude + '?overview=false&alternatives=false';
+
+    console.log('[Paris] Fetching route for ' + place.name + ': ' + url);
+
+    return fetch(url)
+      .then(function(resp) {
+        if (!resp.ok) throw new Error('HTTP ' + resp.status);
+        return resp.json();
+      })
+      .then(function(data) {
+        if (data.code !== 'Ok' || !data.routes || data.routes.length === 0) {
+          throw new Error('No route returned');
+        }
+
+        var route = data.routes[0];
+        // route.distance = actual routed walking distance in meters
+        var routedDistance = route.distance;
+        // Calculate time at family walking pace (1.0 m/s = 3.6 km/h)
+        var duration = routedDistance / WALK_SPEED_MS;
+
+        console.log('[Paris] ' + place.name + ': OSRM distance=' + Math.round(routedDistance) + 'm, calculated time=' + Math.round(duration/60) + 'min');
+
+        return { id: place.id, distance: routedDistance, duration: duration };
+      });
+  }
+
+  function fetchAllRoutes() {
     if (userLat == null || routingInFlight) return;
 
-    const visiblePlaces = getFilteredPlaces();
-    if (visiblePlaces.length === 0) return;
+    var visible = getFilteredPlaces();
+    if (visible.length === 0) return;
 
     routingInFlight = true;
     showRoutingStatus('Updating walking times…');
 
-    const now = Date.now();
-    let successCount = 0;
-    let errorCount = 0;
+    var now = Date.now();
+    var ok = 0;
+    var fail = 0;
 
-    // Batch places into groups to avoid hammering the server
-    const batches = [];
-    for (let i = 0; i < visiblePlaces.length; i += ROUTE_BATCH_SIZE) {
-      batches.push(visiblePlaces.slice(i, i + ROUTE_BATCH_SIZE));
-    }
+    // Process in sequential batches
+    var batchIndex = 0;
 
-    for (let b = 0; b < batches.length; b++) {
-      const batch = batches[b];
+    function processBatch() {
+      if (batchIndex >= visible.length) {
+        // All done
+        lastRoutingPos = { lat: userLat, lng: userLng };
+        routingInFlight = false;
 
-      // Fetch each route in this batch concurrently
-      const promises = batch.map(async (p) => {
-        const url = `${OSRM_ROUTE_BASE}/${userLng},${userLat};${p.longitude},${p.latitude}?overview=false`;
-        try {
-          const resp = await fetch(url);
-          if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-          const data = await resp.json();
-          if (data.code === 'Ok' && data.routes && data.routes.length > 0) {
-            const route = data.routes[0];
-            routingCache[p.id] = {
-              duration: route.duration,
-              distance: route.distance,
+        if (fail > 0 && ok === 0) {
+          showRoutingStatus('Could not fetch walking times — will retry');
+        } else if (fail > 0) {
+          showRoutingStatus('Updated ' + ok + ' of ' + (ok + fail) + ' places');
+          setTimeout(function() { showRoutingStatus(''); }, 4000);
+        } else {
+          showRoutingStatus('');
+          console.log('[Paris] All ' + ok + ' routes updated successfully');
+        }
+        render();
+        return;
+      }
+
+      var batch = visible.slice(batchIndex, batchIndex + BATCH_SIZE);
+      batchIndex += BATCH_SIZE;
+
+      var promises = batch.map(function(p) {
+        return fetchOneRoute(p)
+          .then(function(result) {
+            routingCache[result.id] = {
+              distance: result.distance,
+              duration: result.duration,
               timestamp: now
             };
-            successCount++;
-          } else {
-            throw new Error('No route found');
-          }
-        } catch (e) {
-          errorCount++;
-          // Keep stale cache entry if it exists
-        }
+            ok++;
+          })
+          .catch(function(err) {
+            fail++;
+            console.warn('[Paris] Route failed for ' + p.name + ':', err.message);
+          });
       });
 
-      await Promise.all(promises);
-
-      // Render progress after each batch so cards update progressively
-      render();
-
-      // Small delay between batches to be respectful to the public server
-      if (b < batches.length - 1) {
-        await new Promise(r => setTimeout(r, ROUTE_BATCH_DELAY));
-      }
+      Promise.all(promises).then(function() {
+        render(); // Progressive update
+        setTimeout(processBatch, BATCH_DELAY_MS);
+      });
     }
 
-    lastRoutingPos = { lat: userLat, lng: userLng };
-    routingInFlight = false;
-
-    if (errorCount > 0 && successCount === 0) {
-      const cached = Object.values(routingCache).length;
-      showRoutingStatus(cached > 0 ? 'Using cached walking times' : 'Could not fetch walking times — will retry');
-    } else if (errorCount > 0) {
-      showRoutingStatus(`Updated ${successCount} of ${successCount + errorCount} places`);
-      setTimeout(() => showRoutingStatus(''), 3000);
-    } else {
-      showRoutingStatus('');
-    }
-
-    render();
+    processBatch();
   }
 
   function showRoutingStatus(msg) {
@@ -534,11 +539,10 @@
   // ════════════════════════════════════════════════
 
   function bindEvents() {
-    // Filter chips
-    elFiltersTrack.addEventListener('click', (e) => {
-      const chip = e.target.closest('.filter-chip');
+    elFiltersTrack.addEventListener('click', function(e) {
+      var chip = e.target.closest('.filter-chip');
       if (!chip) return;
-      const cat = chip.dataset.cat;
+      var cat = chip.dataset.cat;
       if (activeFilters.has(cat)) {
         activeFilters.delete(cat);
         chip.classList.remove('active');
@@ -547,52 +551,49 @@
         chip.classList.add('active');
       }
       render();
-      if (locationGranted && userLat != null) fetchRouting();
+      if (locationGranted && userLat != null) fetchAllRoutes();
     });
 
-    // Search
-    elSearch.addEventListener('input', () => {
+    elSearch.addEventListener('input', function() {
       searchQuery = elSearch.value.trim();
       elSearchClear.classList.toggle('visible', searchQuery.length > 0);
       render();
     });
-    elSearchClear.addEventListener('click', () => {
+    elSearchClear.addEventListener('click', function() {
       elSearch.value = '';
       searchQuery = '';
       elSearchClear.classList.remove('visible');
       render();
     });
 
-    // Sort
-    $('#sort-btn').addEventListener('click', (e) => {
+    $('#sort-btn').addEventListener('click', function(e) {
       e.stopPropagation();
       elSortDropdown.classList.toggle('hidden');
     });
-    elSortDropdown.addEventListener('click', (e) => {
-      const opt = e.target.closest('.sort-option');
+    elSortDropdown.addEventListener('click', function(e) {
+      var opt = e.target.closest('.sort-option');
       if (!opt) return;
       currentSort = opt.dataset.sort;
-      $$('.sort-option').forEach(el => el.classList.remove('active'));
+      $$('.sort-option').forEach(function(el) { el.classList.remove('active'); });
       opt.classList.add('active');
       elSortDropdown.classList.add('hidden');
       render();
     });
-    document.addEventListener('click', () => elSortDropdown.classList.add('hidden'));
+    document.addEventListener('click', function() { elSortDropdown.classList.add('hidden'); });
 
-    // View toggle
-    $$('.view-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const view = btn.dataset.view;
+    $$('.view-btn').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        var view = btn.dataset.view;
         if (view === currentView) return;
         currentView = view;
-        $$('.view-btn').forEach(b => b.classList.remove('active'));
+        $$('.view-btn').forEach(function(b) { b.classList.remove('active'); });
         btn.classList.add('active');
 
         if (view === 'map') {
           elListView.classList.add('hidden');
           elMapView.classList.remove('hidden');
           if (!mapReady) initMap();
-          setTimeout(() => map.invalidateSize(), 100);
+          setTimeout(function() { map.invalidateSize(); }, 100);
           if (userLat != null) {
             mapFollowUser = true;
             map.setView([userLat, userLng], 14, { animate: true });
@@ -605,10 +606,8 @@
       });
     });
 
-    // Location button
-    $('#location-btn').addEventListener('click', () => {
+    $('#location-btn').addEventListener('click', function() {
       if (locationGranted && userLat != null) {
-        // Re-center map if in map view
         if (currentView === 'map' && map) {
           mapFollowUser = true;
           map.setView([userLat, userLng], 15, { animate: true });
@@ -618,15 +617,13 @@
       }
     });
 
-    // Enable location button in prompt
-    $('#enable-location-btn')?.addEventListener('click', startLocation);
+    var enableBtn = $('#enable-location-btn');
+    if (enableBtn) enableBtn.addEventListener('click', startLocation);
 
-    // Delegated events on list
-    elList.addEventListener('click', (e) => {
-      // More notes toggle
-      const toggle = e.target.closest('.card-more-toggle');
+    elList.addEventListener('click', function(e) {
+      var toggle = e.target.closest('.card-more-toggle');
       if (toggle) {
-        const target = document.getElementById(toggle.dataset.target);
+        var target = document.getElementById(toggle.dataset.target);
         if (target) {
           target.classList.toggle('open');
           toggle.textContent = target.classList.contains('open') ? 'Less details ▴' : 'More details ▾';
@@ -634,51 +631,51 @@
         return;
       }
 
-      // Show on map button
-      const mapBtn = e.target.closest('[data-action="show-map"]');
+      var mapBtn = e.target.closest('[data-action="show-map"]');
       if (mapBtn) {
-        const placeId = mapBtn.dataset.id;
-        const place = places.find(p => p.id === placeId);
+        var placeId = mapBtn.dataset.id;
+        var place = places.find(function(p) { return p.id === placeId; });
         if (place) showPlaceOnMap(place);
         return;
       }
     });
 
-    // Clear filters in empty state
-    $('#clear-filters-btn')?.addEventListener('click', () => {
+    var clearBtn = $('#clear-filters-btn');
+    if (clearBtn) clearBtn.addEventListener('click', function() {
       activeFilters.clear();
       searchQuery = '';
       elSearch.value = '';
       elSearchClear.classList.remove('visible');
-      $$('.filter-chip').forEach(c => c.classList.remove('active'));
+      $$('.filter-chip').forEach(function(c) { c.classList.remove('active'); });
       render();
     });
 
-    // Close map detail
-    elMapDetail.addEventListener('click', (e) => {
+    elMapDetail.addEventListener('click', function(e) {
       if (e.target === elMapDetail || e.target.classList.contains('map-detail-handle')) {
         elMapDetail.classList.remove('visible');
-        setTimeout(() => elMapDetail.classList.add('hidden'), 300);
+        setTimeout(function() { elMapDetail.classList.add('hidden'); }, 300);
       }
     });
   }
 
   function showPlaceOnMap(place) {
-    // Switch to map view
     currentView = 'map';
-    $$('.view-btn').forEach(b => b.classList.remove('active'));
+    $$('.view-btn').forEach(function(b) { b.classList.remove('active'); });
     $('[data-view="map"]').classList.add('active');
     elListView.classList.add('hidden');
     elMapView.classList.remove('hidden');
 
     if (!mapReady) initMap();
-    setTimeout(() => {
+    setTimeout(function() {
       map.invalidateSize();
       mapFollowUser = false;
       map.setView([place.latitude, place.longitude], 16, { animate: true });
 
-      // Find and open popup for this place
-      const idx = getFilteredPlaces().findIndex(p => p.id === place.id);
+      var filtered = getFilteredPlaces();
+      var idx = -1;
+      for (var i = 0; i < filtered.length; i++) {
+        if (filtered[i].id === place.id) { idx = i; break; }
+      }
       if (idx >= 0 && placeMarkers[idx]) {
         showMapPopup(place, placeMarkers[idx]);
       }
@@ -690,45 +687,45 @@
   // ════════════════════════════════════════════════
 
   function getGoogleMapsUrl(place) {
-    // Deep link optimized for iPhone — opens in Google Maps app if installed
     if (userLat != null) {
-      return `https://www.google.com/maps/dir/?api=1&origin=${userLat},${userLng}&destination=${encodeURIComponent(place.google_maps_query || place.name + ', Paris')}&travelmode=walking`;
+      return 'https://www.google.com/maps/dir/?api=1&origin=' + userLat + ',' + userLng + '&destination=' + encodeURIComponent(place.google_maps_query || place.name + ', Paris') + '&travelmode=walking';
     }
-    return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(place.google_maps_query || place.name + ', Paris')}`;
+    return 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(place.google_maps_query || place.name + ', Paris');
   }
 
   function formatDuration(seconds) {
     if (seconds == null) return '—';
-    const mins = Math.round(seconds / 60);
-    if (mins < 60) return `${mins} min`;
-    const h = Math.floor(mins / 60);
-    const m = mins % 60;
-    return m > 0 ? `${h}h ${m}m` : `${h}h`;
+    var mins = Math.round(seconds / 60);
+    if (mins < 1) return '1 min';
+    if (mins < 60) return mins + ' min';
+    var h = Math.floor(mins / 60);
+    var m = mins % 60;
+    return m > 0 ? h + 'h ' + m + 'm' : h + 'h';
   }
 
   function formatDistance(meters) {
     if (meters == null) return '—';
-    if (meters < 1000) return `${Math.round(meters)} m`;
-    return `${(meters / 1000).toFixed(1)} km`;
+    if (meters < 1000) return Math.round(meters) + ' m';
+    return (meters / 1000).toFixed(1) + ' km';
   }
 
   function formatTimeAgo(timestamp) {
-    const diff = Math.round((Date.now() - timestamp) / 60000);
+    var diff = Math.round((Date.now() - timestamp) / 60000);
     if (diff < 1) return 'just now';
-    return `${diff}m ago`;
+    return diff + 'm ago';
   }
 
   function haversine(lat1, lon1, lat2, lon2) {
-    const R = 6371000;
-    const dLat = (lat2 - lat1) * Math.PI / 180;
-    const dLon = (lon2 - lon1) * Math.PI / 180;
-    const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon / 2) ** 2;
+    var R = 6371000;
+    var dLat = (lat2 - lat1) * Math.PI / 180;
+    var dLon = (lon2 - lon1) * Math.PI / 180;
+    var a = Math.sin(dLat/2) * Math.sin(dLat/2) + Math.cos(lat1 * Math.PI/180) * Math.cos(lat2 * Math.PI/180) * Math.sin(dLon/2) * Math.sin(dLon/2);
     return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   }
 
   function esc(str) {
     if (!str) return '';
-    const d = document.createElement('div');
+    var d = document.createElement('div');
     d.textContent = str;
     return d.innerHTML;
   }
