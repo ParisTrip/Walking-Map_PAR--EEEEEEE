@@ -14,7 +14,7 @@
     "latitude": 48.8583701,
     "longitude": 2.2944813,
     "source_notes": "Spreadsheet + recommendation list",
-    "google_maps_query": "Eiffel+Tower,+Paris",
+    "google_maps_query": "Eiffel Tower, Av. Gustave Eiffel, 75007 Paris",
     "status": "approved"
   },
   {
@@ -32,7 +32,7 @@
     "latitude": 48.8867046,
     "longitude": 2.3431043,
     "source_notes": "Spreadsheet (funicular + carousel note) + recommendation list (stairs + view note)",
-    "google_maps_query": "Sacré-Cœur,+Paris",
+    "google_maps_query": "Basilique du Sacré-Cœur, 35 Rue du Chevalier de la Barre, 75018 Paris",
     "status": "approved"
   },
   {
@@ -49,7 +49,7 @@
     "latitude": 48.8599614,
     "longitude": 2.3265614,
     "source_notes": "Spreadsheet (closed Mondays) + recommendation list (preferred over Louvre)",
-    "google_maps_query": "Musée+d'Orsay,+Paris",
+    "google_maps_query": "Musée d'Orsay, Esplanade Valéry Giscard d'Estaing, 75007 Paris",
     "status": "approved"
   },
   {
@@ -66,7 +66,7 @@
     "latitude": 48.855375,
     "longitude": 2.3449609,
     "source_notes": "Spreadsheet",
-    "google_maps_query": "Sainte-Chapelle,+Paris",
+    "google_maps_query": "Sainte-Chapelle, 10 Bd du Palais, 75001 Paris",
     "status": "approved"
   },
   {
@@ -83,7 +83,7 @@
     "latitude": 48.8529682,
     "longitude": 2.3499021,
     "source_notes": "Spreadsheet",
-    "google_maps_query": "Notre-Dame+de+Paris",
+    "google_maps_query": "Notre-Dame Cathedral, 6 Parvis Notre-Dame, 75004 Paris",
     "status": "approved"
   },
   {
@@ -101,7 +101,7 @@
     "latitude": 48.8634916,
     "longitude": 2.3274943,
     "source_notes": "Spreadsheet (outside note) + recommendation list (Louvre plaza wandering)",
-    "google_maps_query": "Jardin+des+Tuileries,+Paris",
+    "google_maps_query": "Jardin des Tuileries, 75001 Paris",
     "status": "approved"
   },
   {
@@ -119,7 +119,7 @@
     "latitude": 48.8466144,
     "longitude": 2.3363309,
     "source_notes": "Spreadsheet (boats, carousel, picnic)",
-    "google_maps_query": "Jardin+du+Luxembourg,+Paris",
+    "google_maps_query": "Jardin du Luxembourg, 75006 Paris",
     "status": "approved"
   },
   {
@@ -136,7 +136,7 @@
     "latitude": 48.8777811,
     "longitude": 2.2697644,
     "source_notes": "Spreadsheet (rides and gardens)",
-    "google_maps_query": "Jardin+d'Acclimatation,+Paris",
+    "google_maps_query": "Jardin d'Acclimatation, Bois de Boulogne, 75116 Paris",
     "status": "approved"
   },
   {
@@ -154,7 +154,7 @@
     "latitude": 48.8736224,
     "longitude": 2.3321099,
     "source_notes": "Recommendation list (department store, glass domes, cafés)",
-    "google_maps_query": "Galeries+Lafayette+Haussmann,+Paris",
+    "google_maps_query": "Galeries Lafayette Haussmann, 40 Bd Haussmann, 75009 Paris",
     "status": "approved"
   },
   {
@@ -172,7 +172,7 @@
     "latitude": 48.8736224,
     "longitude": 2.3321099,
     "source_notes": "Recommendation list (rooftop)",
-    "google_maps_query": "Galeries+Lafayette+Rooftop+Terrace,+Paris",
+    "google_maps_query": "Galeries Lafayette Rooftop, 40 Bd Haussmann, 75009 Paris",
     "status": "approved"
   },
   {
@@ -189,7 +189,7 @@
     "latitude": 48.851204,
     "longitude": 2.324485,
     "source_notes": "Recommendation list",
-    "google_maps_query": "Le+Bon+Marché,+Paris",
+    "google_maps_query": "Le Bon Marché, 24 Rue de Sèvres, 75007 Paris",
     "status": "approved"
   },
   {
@@ -207,7 +207,7 @@
     "latitude": 48.8737917,
     "longitude": 2.2950275,
     "source_notes": "Recommendation list",
-    "google_maps_query": "Arc+de+Triomphe,+Paris",
+    "google_maps_query": "Arc de Triomphe, Place Charles de Gaulle, 75008 Paris",
     "status": "approved"
   },
   {
@@ -224,7 +224,7 @@
     "latitude": 48.851,
     "longitude": 2.344,
     "source_notes": "Recommendation list (Monnaie/Latin Quarter/Blvd Saint-Germain/Café Mabillon)",
-    "google_maps_query": "Boulevard+Saint-Germain,+Paris",
+    "google_maps_query": "Boulevard Saint-Germain, 75006 Paris",
     "status": "approved"
   },
   {
@@ -240,7 +240,7 @@
     "latitude": 48.8533377,
     "longitude": 2.3358151,
     "source_notes": "Recommendation list",
-    "google_maps_query": "Café+Mabillon,+Paris",
+    "google_maps_query": "Le Mabillon, 164 Bd Saint-Germain, 75006 Paris",
     "status": "approved"
   },
   {
@@ -257,7 +257,7 @@
     "latitude": 48.8593,
     "longitude": 2.3614,
     "source_notes": "Recommendation list",
-    "google_maps_query": "Le+Marais,+Paris",
+    "google_maps_query": "Le Marais, 75004 Paris",
     "status": "approved"
   },
   {
@@ -274,7 +274,7 @@
     "latitude": 48.8607214,
     "longitude": 2.3668319,
     "source_notes": "Recommendation list (favorite store/café, visits every trip)",
-    "google_maps_query": "Merci+concept+store,+Paris",
+    "google_maps_query": "Merci, 111 Bd Beaumarchais, 75003 Paris",
     "status": "approved"
   },
   {
@@ -290,7 +290,7 @@
     "latitude": 48.8587454,
     "longitude": 2.3541923,
     "source_notes": "Recommendation list",
-    "google_maps_query": "Fleux,+Paris",
+    "google_maps_query": "Fleux, 39 Rue Sainte-Croix de la Bretonnerie, 75004 Paris",
     "status": "approved"
   },
   {
@@ -307,7 +307,7 @@
     "latitude": 48.8468691,
     "longitude": 2.3708535,
     "source_notes": "Recommendation list",
-    "google_maps_query": "Rue+Crémieux,+Paris",
+    "google_maps_query": "Rue Crémieux, 75012 Paris",
     "status": "approved"
   },
   {
@@ -325,7 +325,7 @@
     "latitude": 48.853,
     "longitude": 2.347,
     "source_notes": "Recommendation list",
-    "google_maps_query": "Quai+de+la+Tournelle,+Paris",
+    "google_maps_query": "Quai de la Tournelle, 75005 Paris",
     "status": "approved"
   },
   {
@@ -342,7 +342,7 @@
     "latitude": 48.8502955,
     "longitude": 2.3240063,
     "source_notes": "Recommendation list (butter vacuum-seal tip)",
-    "google_maps_query": "La+Grande+Épicerie+de+Paris",
+    "google_maps_query": "La Grande Épicerie de Paris, 38 Rue de Sèvres, 75007 Paris",
     "status": "approved"
   },
   {
@@ -358,12 +358,12 @@
     "latitude": 48.8517684,
     "longitude": 2.3354537,
     "source_notes": "Recommendation list",
-    "google_maps_query": "L'Avant+Comptoir+du+Marché,+Paris",
+    "google_maps_query": "L'Avant Comptoir du Marché, 14 Rue Lobineau, 75006 Paris",
     "status": "approved"
   },
   {
-    "id": "laduree",
-    "name": "Ladurée",
+    "id": "laduree-1",
+    "name": "Ladurée — Champs-Élysées",
     "normalized_name": "laduree",
     "category_tags": [
       "bakeries",
@@ -375,7 +375,41 @@
     "latitude": 48.870839,
     "longitude": 2.30319,
     "source_notes": "Recommendation list (macarons)",
-    "google_maps_query": "Ladurée+Champs-Élysées,+Paris",
+    "google_maps_query": "Ladurée, 75 Av. des Champs-Élysées, 75008 Paris",
+    "status": "approved"
+  },
+  {
+    "id": "laduree-2",
+    "name": "Ladurée — Rue Royale",
+    "normalized_name": "laduree",
+    "category_tags": [
+      "bakeries",
+      "dessert"
+    ],
+    "short_description": "The legendary macaron house — gorgeous pastries in an ornate Parisian salon.",
+    "more_notes": "Famous for their macarons and elegant tea salon. The Champs-Élysées location is the most iconic. Can be pricey but worth it for the experience. Kids usually love picking out colorful macarons.",
+    "address_or_search_text": "Ladurée, 75 Avenue des Champs-Élysées, Paris",
+    "latitude": 48.8684378,
+    "longitude": 2.3236443,
+    "source_notes": "Recommendation list (macarons)",
+    "google_maps_query": "Ladurée, 16 Rue Royale, 75008 Paris",
+    "status": "approved"
+  },
+  {
+    "id": "laduree-3",
+    "name": "Ladurée — Bonaparte (St-Germain)",
+    "normalized_name": "laduree",
+    "category_tags": [
+      "bakeries",
+      "dessert"
+    ],
+    "short_description": "The legendary macaron house — gorgeous pastries in an ornate Parisian salon.",
+    "more_notes": "Famous for their macarons and elegant tea salon. The Champs-Élysées location is the most iconic. Can be pricey but worth it for the experience. Kids usually love picking out colorful macarons.",
+    "address_or_search_text": "Ladurée, 75 Avenue des Champs-Élysées, Paris",
+    "latitude": 48.8555931,
+    "longitude": 2.3341034,
+    "source_notes": "Recommendation list (macarons)",
+    "google_maps_query": "Ladurée Bonaparte, 21 Rue Bonaparte, 75006 Paris",
     "status": "approved"
   },
   {
@@ -391,12 +425,12 @@
     "latitude": 48.8522892,
     "longitude": 2.346532,
     "source_notes": "Recommendation list (personally visited, really good)",
-    "google_maps_query": "Ostra+Paris",
+    "google_maps_query": "Ostra, 17 Rue du Petit Pont, 75005 Paris",
     "status": "approved"
   },
   {
-    "id": "french-bastards",
-    "name": "The French Bastards",
+    "id": "french-bastards-1",
+    "name": "The French Bastards — Marais (Rambuteau)",
     "normalized_name": "the french bastards",
     "category_tags": [
       "bakeries"
@@ -407,12 +441,76 @@
     "latitude": 48.8607879,
     "longitude": 2.3545396,
     "source_notes": "Recommendation list (multiple locations)",
-    "google_maps_query": "The+French+Bastards,+Paris",
+    "google_maps_query": "The French Bastards, 23 Rue Rambuteau, 75004 Paris",
     "status": "approved"
   },
   {
-    "id": "carette",
-    "name": "Carette",
+    "id": "french-bastards-2",
+    "name": "The French Bastards — Marais (Temple)",
+    "normalized_name": "the french bastards",
+    "category_tags": [
+      "bakeries"
+    ],
+    "short_description": "Trendy modern bakery with creative pastries and excellent croissants — multiple locations.",
+    "more_notes": "Several locations around Paris so you'll likely pass one. Known for inventive twists on classic French pastries.",
+    "address_or_search_text": "The French Bastards, Paris",
+    "latitude": 48.8575538,
+    "longitude": 2.352529,
+    "source_notes": "Recommendation list (multiple locations)",
+    "google_maps_query": "The French Bastards, 5 Rue du Temple, 75004 Paris",
+    "status": "approved"
+  },
+  {
+    "id": "french-bastards-3",
+    "name": "The French Bastards — Oberkampf",
+    "normalized_name": "the french bastards",
+    "category_tags": [
+      "bakeries"
+    ],
+    "short_description": "Trendy modern bakery with creative pastries and excellent croissants — multiple locations.",
+    "more_notes": "Several locations around Paris so you'll likely pass one. Known for inventive twists on classic French pastries.",
+    "address_or_search_text": "The French Bastards, Paris",
+    "latitude": 48.8648095,
+    "longitude": 2.3728563,
+    "source_notes": "Recommendation list (multiple locations)",
+    "google_maps_query": "The French Bastards, 61 Rue Oberkampf, 75011 Paris",
+    "status": "approved"
+  },
+  {
+    "id": "french-bastards-4",
+    "name": "The French Bastards — Rue St Denis",
+    "normalized_name": "the french bastards",
+    "category_tags": [
+      "bakeries"
+    ],
+    "short_description": "Trendy modern bakery with creative pastries and excellent croissants — multiple locations.",
+    "more_notes": "Several locations around Paris so you'll likely pass one. Known for inventive twists on classic French pastries.",
+    "address_or_search_text": "The French Bastards, Paris",
+    "latitude": 48.8656629,
+    "longitude": 2.3504121,
+    "source_notes": "Recommendation list (multiple locations)",
+    "google_maps_query": "The French Bastards, 181 Rue St Denis, 75002 Paris",
+    "status": "approved"
+  },
+  {
+    "id": "french-bastards-5",
+    "name": "The French Bastards — Sèvres",
+    "normalized_name": "the french bastards",
+    "category_tags": [
+      "bakeries"
+    ],
+    "short_description": "Trendy modern bakery with creative pastries and excellent croissants — multiple locations.",
+    "more_notes": "Several locations around Paris so you'll likely pass one. Known for inventive twists on classic French pastries.",
+    "address_or_search_text": "The French Bastards, Paris",
+    "latitude": 48.8482232,
+    "longitude": 2.3197027,
+    "source_notes": "Recommendation list (multiple locations)",
+    "google_maps_query": "The French Bastards, 60 Rue de Sèvres, 75007 Paris",
+    "status": "approved"
+  },
+  {
+    "id": "carette-1",
+    "name": "Carette — Place des Vosges",
     "normalized_name": "carette",
     "category_tags": [
       "cafes",
@@ -424,12 +522,29 @@
     "latitude": 48.8563302,
     "longitude": 2.3655661,
     "source_notes": "Spreadsheet + recommendation list (hot chocolate)",
-    "google_maps_query": "Carette+Place+des+Vosges,+Paris",
+    "google_maps_query": "Carette, 25 Place des Vosges, 75003 Paris",
     "status": "approved"
   },
   {
-    "id": "eclair-de-genie",
-    "name": "L'Éclair de Génie",
+    "id": "carette-2",
+    "name": "Carette — Trocadéro",
+    "normalized_name": "carette",
+    "category_tags": [
+      "cafes",
+      "dessert"
+    ],
+    "short_description": "Elegant Parisian pâtisserie-salon famous for its rich, decadent hot chocolate.",
+    "more_notes": "Known especially for their hot chocolate — one of the best in Paris. The Place des Vosges location has a beautiful terrace. Also serves classic French pastries and light meals.",
+    "address_or_search_text": "Carette, 25 Place des Vosges, Paris",
+    "latitude": 48.8637073,
+    "longitude": 2.2872082,
+    "source_notes": "Spreadsheet + recommendation list (hot chocolate)",
+    "google_maps_query": "Carette, 4 Place du Trocadéro, 75016 Paris",
+    "status": "approved"
+  },
+  {
+    "id": "eclair-de-genie-1",
+    "name": "L'Éclair de Génie — Rue Montmartre (Café)",
     "normalized_name": "leclair de genie",
     "category_tags": [
       "bakeries",
@@ -441,7 +556,41 @@
     "latitude": 48.8679213,
     "longitude": 2.3439371,
     "source_notes": "Recommendation list",
-    "google_maps_query": "L'Éclair+de+Génie,+Paris",
+    "google_maps_query": "L'Éclair de Génie Café, 122 Rue Montmartre, 75002 Paris",
+    "status": "approved"
+  },
+  {
+    "id": "eclair-de-genie-2",
+    "name": "L'Éclair de Génie — Galeries Lafayette",
+    "normalized_name": "leclair de genie",
+    "category_tags": [
+      "bakeries",
+      "dessert"
+    ],
+    "short_description": "Artisan éclair shop with gorgeous, inventive flavors — almost too pretty to eat.",
+    "more_notes": "Beautifully crafted éclairs in flavors like yuzu, salted caramel, and seasonal specials. Small shop, quick visit. Great for a dessert stop while exploring Le Marais.",
+    "address_or_search_text": "L'Éclair de Génie, 14 Rue Pavée, Paris",
+    "latitude": 48.8731537,
+    "longitude": 2.3304052,
+    "source_notes": "Recommendation list",
+    "google_maps_query": "L'Éclair de Génie, Galeries Lafayette, 35 Bd Haussmann, 75009 Paris",
+    "status": "approved"
+  },
+  {
+    "id": "eclair-de-genie-3",
+    "name": "L'Éclair de Génie — La Fabrique",
+    "normalized_name": "leclair de genie",
+    "category_tags": [
+      "bakeries",
+      "dessert"
+    ],
+    "short_description": "Artisan éclair shop with gorgeous, inventive flavors — almost too pretty to eat.",
+    "more_notes": "Beautifully crafted éclairs in flavors like yuzu, salted caramel, and seasonal specials. Small shop, quick visit. Great for a dessert stop while exploring Le Marais.",
+    "address_or_search_text": "L'Éclair de Génie, 14 Rue Pavée, Paris",
+    "latitude": 48.8683664,
+    "longitude": 2.3419692,
+    "source_notes": "Recommendation list",
+    "google_maps_query": "L'Éclair de Génie La Fabrique, 32 Rue Notre Dame des Victoires, 75002 Paris",
     "status": "approved"
   },
   {
@@ -457,7 +606,7 @@
     "latitude": 48.8800888,
     "longitude": 2.3435419,
     "source_notes": "Recommendation list (jambon comté sandwich, almond croissant)",
-    "google_maps_query": "Mamiche+bakery,+Paris",
+    "google_maps_query": "Mamiche, 45 Rue Condorcet, 75009 Paris",
     "status": "approved"
   },
   {
@@ -474,7 +623,7 @@
     "latitude": 48.866936,
     "longitude": 2.347478,
     "source_notes": "Recommendation list (hazelnut + brûléed banana crêpe)",
-    "google_maps_query": "Breizh+Café+Montorgueil,+Paris",
+    "google_maps_query": "Breizh Café, 14 Rue des Petits Carreaux, 75002 Paris",
     "status": "approved"
   },
   {
@@ -491,7 +640,7 @@
     "latitude": 48.8740931,
     "longitude": 2.3420946,
     "source_notes": "Recommendation list",
-    "google_maps_query": "MONBLEU+Faubourg+Montmartre,+Paris",
+    "google_maps_query": "MONBLEU, 37 Rue du Faubourg Montmartre, 75009 Paris",
     "status": "approved"
   },
   {
@@ -509,7 +658,7 @@
     "latitude": 48.8738552,
     "longitude": 2.3280513,
     "source_notes": "Recommendation list",
-    "google_maps_query": "Printemps+Haussmann+Rooftop,+Paris",
+    "google_maps_query": "Printemps Rooftop Terrace, 64 Bd Haussmann, 75009 Paris",
     "status": "approved"
   },
   {
@@ -526,7 +675,7 @@
     "latitude": 48.8708719,
     "longitude": 2.3317623,
     "source_notes": "Recommendation list",
-    "google_maps_query": "Café+de+la+Paix,+Paris",
+    "google_maps_query": "Café de la Paix, 5 Place de l'Opéra, 75009 Paris",
     "status": "approved"
   },
   {
@@ -543,7 +692,7 @@
     "latitude": 48.854052,
     "longitude": 2.3331062,
     "source_notes": "Spreadsheet + recommendation list (croque monsieur)",
-    "google_maps_query": "Les+Deux+Magots,+Paris",
+    "google_maps_query": "Les Deux Magots, 6 Place Saint-Germain des Prés, 75006 Paris",
     "status": "approved"
   },
   {
@@ -559,7 +708,7 @@
     "latitude": 48.868142,
     "longitude": 2.3027971,
     "source_notes": "Recommendation list (Bordeaux experience, Paris location)",
-    "google_maps_query": "L'Entrecôte,+Rue+Marbeuf,+Paris",
+    "google_maps_query": "Relais de l'Entrecôte, 15 Rue Marbeuf, 75008 Paris",
     "status": "approved"
   },
   {
@@ -576,7 +725,7 @@
     "latitude": 48.8520501,
     "longitude": 2.3465218,
     "source_notes": "Recommendation list",
-    "google_maps_query": "Odette+Paris",
+    "google_maps_query": "Odette, 77 Rue Galande, 75005 Paris",
     "status": "approved"
   },
   {
@@ -594,7 +743,7 @@
     "latitude": 48.8657167,
     "longitude": 2.3532252,
     "source_notes": "Recommendation list (cute rooftop)",
-    "google_maps_query": "Hôtel+National+des+Arts+et+Métiers+rooftop,+Paris",
+    "google_maps_query": "Hôtel National des Arts et Métiers, 243 Rue Saint-Martin, 75003 Paris",
     "status": "approved"
   },
   {
@@ -611,12 +760,12 @@
     "latitude": 48.8650898,
     "longitude": 2.3284434,
     "source_notes": "Spreadsheet (hot chocolate)",
-    "google_maps_query": "Angelina+Rue+de+Rivoli,+Paris",
+    "google_maps_query": "Angelina, 226 Rue de Rivoli, 75001 Paris",
     "status": "approved"
   },
   {
-    "id": "bouillon-chartier",
-    "name": "Bouillon Chartier",
+    "id": "bouillon-chartier-1",
+    "name": "Bouillon Chartier — Grands Boulevards",
     "normalized_name": "bouillon chartier",
     "category_tags": [
       "restaurants",
@@ -629,7 +778,43 @@
     "latitude": 48.8719224,
     "longitude": 2.3430304,
     "source_notes": "Spreadsheet (no reservation)",
-    "google_maps_query": "Bouillon+Chartier,+Paris",
+    "google_maps_query": "Bouillon Chartier, 7 Rue du Faubourg Montmartre, 75009 Paris",
+    "status": "approved"
+  },
+  {
+    "id": "bouillon-chartier-2",
+    "name": "Bouillon Chartier — Montparnasse",
+    "normalized_name": "bouillon chartier",
+    "category_tags": [
+      "restaurants",
+      "family",
+      "sights"
+    ],
+    "short_description": "Historic 1896 workers' restaurant with stunning Belle Époque décor and very affordable prices.",
+    "more_notes": "No reservations — just show up and queue (it moves fast). Classic French comfort food at incredibly low prices in a gorgeous dining room. Kids welcome. A truly unique Paris dining experience.",
+    "address_or_search_text": "Bouillon Chartier, 7 Rue du Faubourg Montmartre, Paris",
+    "latitude": 48.8442908,
+    "longitude": 2.3233219,
+    "source_notes": "Spreadsheet (no reservation)",
+    "google_maps_query": "Bouillon Chartier Montparnasse, 59 Bd du Montparnasse, 75006 Paris",
+    "status": "approved"
+  },
+  {
+    "id": "bouillon-chartier-3",
+    "name": "Bouillon Chartier — Gare de l'Est",
+    "normalized_name": "bouillon chartier",
+    "category_tags": [
+      "restaurants",
+      "family",
+      "sights"
+    ],
+    "short_description": "Historic 1896 workers' restaurant with stunning Belle Époque décor and very affordable prices.",
+    "more_notes": "No reservations — just show up and queue (it moves fast). Classic French comfort food at incredibly low prices in a gorgeous dining room. Kids welcome. A truly unique Paris dining experience.",
+    "address_or_search_text": "Bouillon Chartier, 7 Rue du Faubourg Montmartre, Paris",
+    "latitude": 48.8759574,
+    "longitude": 2.3587849,
+    "source_notes": "Spreadsheet (no reservation)",
+    "google_maps_query": "Bouillon Chartier, 5 Rue du 8 Mai 1945, 75010 Paris",
     "status": "approved"
   },
   {
@@ -646,7 +831,7 @@
     "latitude": 48.858805,
     "longitude": 2.2913978,
     "source_notes": "Spreadsheet (barge near Eiffel Tower, book one month out, Level 1, Cindy bday)",
-    "google_maps_query": "Francette+restaurant+barge+Paris",
+    "google_maps_query": "Francette, 1 Port de Suffren, 75007 Paris",
     "status": "approved"
   },
   {
@@ -663,7 +848,7 @@
     "latitude": 48.8334295,
     "longitude": 2.3718736,
     "source_notes": "Spreadsheet (Italian food court)",
-    "google_maps_query": "La+Felicità,+Paris",
+    "google_maps_query": "La Felicità, 5 Parvis Alan Turing, 75013 Paris",
     "status": "approved"
   },
   {
@@ -681,7 +866,7 @@
     "latitude": 48.8563,
     "longitude": 2.3052,
     "source_notes": "Spreadsheet (street near Eiffel for food)",
-    "google_maps_query": "Rue+Cler,+Paris",
+    "google_maps_query": "Rue Cler, 75007 Paris",
     "status": "approved"
   },
   {
@@ -698,7 +883,7 @@
     "latitude": 48.8539569,
     "longitude": 2.3123313,
     "source_notes": "Spreadsheet (light show)",
-    "google_maps_query": "Aura+Invalides,+Paris",
+    "google_maps_query": "Aura Invalides, 2 Place Vauban, 75007 Paris",
     "status": "approved"
   },
   {
@@ -715,7 +900,7 @@
     "latitude": 48.8480172,
     "longitude": 2.3529344,
     "source_notes": "Spreadsheet",
-    "google_maps_query": "Paradis+Latin,+Paris",
+    "google_maps_query": "Paradis Latin, 28 Rue du Cardinal Lemoine, 75005 Paris",
     "status": "approved"
   },
   {
@@ -732,7 +917,7 @@
     "latitude": 48.8711033,
     "longitude": 2.33364,
     "source_notes": "Spreadsheet (restaurant w/ oysters & kids menu) — name normalized from 'Grand Cage des Capucines'",
-    "google_maps_query": "Grand+Café+des+Capucines,+Paris",
+    "google_maps_query": "Grand Café Capucines, 4 Bd des Capucines, 75009 Paris",
     "status": "approved"
   },
   {
@@ -749,7 +934,7 @@
     "latitude": 48.8326392,
     "longitude": 2.3892933,
     "source_notes": "Spreadsheet (Wednesday and Weekends)",
-    "google_maps_query": "Musée+des+Arts+Forains,+Paris",
+    "google_maps_query": "Musée des Arts Forains, 53 Av. des Terroirs de France, 75012 Paris",
     "status": "approved"
   }
 ]
