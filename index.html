@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="theme-color" content="#FAF7F2">
+  <title>Paris Guide</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="styles.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🗼</text></svg>">
+</head>
+<body>
+  <div id="app">
+    <!-- Header -->
+    <header id="app-header">
+      <div class="header-top">
+        <h1 class="app-title">Paris</h1>
+        <div class="header-controls">
+          <button id="location-btn" class="icon-btn" aria-label="My Location" title="Enable location">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v4m0 12v4M2 12h4m12 0h4"/><circle cx="12" cy="12" r="8" stroke-dasharray="2 2"/></svg>
+          </button>
+          <button id="sort-btn" class="icon-btn" aria-label="Sort" title="Sort options">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M3 12h12M3 18h6"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Search -->
+      <div class="search-wrap">
+        <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input type="search" id="search-input" placeholder="Search places…" autocomplete="off" autocorrect="off">
+        <button id="search-clear" class="search-clear" aria-label="Clear search">&times;</button>
+      </div>
+
+      <!-- Category Filters -->
+      <div class="filters-scroll" id="filters-scroll">
+        <div class="filters-track" id="filters-track"></div>
+      </div>
+    </header>
+
+    <!-- Sort Dropdown -->
+    <div id="sort-dropdown" class="sort-dropdown hidden">
+      <button class="sort-option active" data-sort="walking-time">Walking time</button>
+      <button class="sort-option" data-sort="walking-distance">Walking distance</button>
+      <button class="sort-option" data-sort="name">Name A–Z</button>
+    </div>
+
+    <!-- View Toggle -->
+    <div id="view-toggle" class="view-toggle">
+      <button class="view-btn active" data-view="list" aria-label="List view">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+      </button>
+      <button class="view-btn" data-view="map" aria-label="Map view">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>
+      </button>
+    </div>
+
+    <!-- List View -->
+    <main id="list-view" class="list-view">
+      <div id="location-prompt" class="location-prompt hidden">
+        <p>Enable location to see walking times and distances to each place.</p>
+        <button id="enable-location-btn" class="btn-primary">Enable Location</button>
+      </div>
+      <div id="routing-status" class="routing-status hidden"></div>
+      <div id="results-count" class="results-count"></div>
+      <div id="place-list" class="place-list"></div>
+      <div id="empty-state" class="empty-state hidden">
+        <p>No places match your filters.</p>
+        <button id="clear-filters-btn" class="btn-secondary">Clear Filters</button>
+      </div>
+    </main>
+
+    <!-- Map View -->
+    <div id="map-view" class="map-view hidden">
+      <div id="map" class="map-container"></div>
+    </div>
+
+    <!-- Map Popup Detail (bottom sheet) -->
+    <div id="map-detail" class="map-detail hidden">
+      <div class="map-detail-handle"></div>
+      <div id="map-detail-content"></div>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
