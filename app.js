@@ -4,11 +4,13 @@
    calculates walking time at family pace.
    No API key needed.
    ════════════════════════════════════════════════ */
-
+ 
 (function () {
   'use strict';
-
+ 
   var CATEGORY_META = {
+    'home':         { label: 'Home',         icon: '🏠' },
+    'coffee':       { label: 'Coffee',       icon: '🫘' },
     'sights':       { label: 'Sights',       icon: '🏛️' },
     'museums':      { label: 'Museums',      icon: '🎨' },
     'bakeries':     { label: 'Bakeries',     icon: '🥐' },
@@ -21,7 +23,7 @@
     'family':       { label: 'Family',       icon: '👨‍👩‍👧‍👦' },
     'views':        { label: 'Views',        icon: '👀' },
   };
-
+ 
   var places = [];
   var activeFilters = new Set();
   var searchQuery = '';
@@ -42,7 +44,7 @@
   var placeMarkers = [];
   var mapFollowUser = true;
   var headerHeight = 0;
-
+ 
   // OSRM car profile gives accurate street distances.
   // Walking time = distance / walking speed.
   // 4.0 km/h = 1.11 m/s — comfortable family pace matching Google Maps.
@@ -53,14 +55,14 @@
   var ROUTING_STALE_MS = 180000;
   var BATCH_SIZE = 5;
   var BATCH_DELAY_MS = 500;
-
+ 
   var $ = function(sel) { return document.querySelector(sel); };
   var $$ = function(sel) { return document.querySelectorAll(sel); };
-
+ 
   var elList, elEmpty, elCount, elSearch, elSearchClear, elFiltersTrack;
   var elSortDropdown, elLocationPrompt, elRoutingStatus;
   var elMapView, elListView, elMapDetail, elMapDetailContent;
-
+ 
   function init() {
     console.log('[Paris v4.0] Initializing — OSRM driving distances + walking pace');
     elList = $('#place-list');
@@ -76,7 +78,7 @@
     elListView = $('#list-view');
     elMapDetail = $('#map-detail');
     elMapDetailContent = $('#map-detail-content');
-
+ 
     showSkeletons();
     fetch('approved_places.json?v=40')
       .then(function(r) { return r.json(); })
@@ -89,7 +91,7 @@
         elList.innerHTML = '<p style="padding:20px;color:#A89F94;">Could not load places data.</p>';
       });
   }
-
+ 
   function checkLocationPermission() {
     if (navigator.permissions && navigator.permissions.query) {
       navigator.permissions.query({ name: 'geolocation' })
@@ -97,18 +99,18 @@
         .catch(function() { showLocationPrompt(); });
     } else { showLocationPrompt(); }
   }
-
+ 
   function showSkeletons() {
     var h = '';
     for (var i = 0; i < 6; i++) h += '<div class="skeleton-card"><div class="skeleton-line"></div><div class="skeleton-line"></div><div class="skeleton-line"></div><div class="skeleton-line"></div></div>';
     elList.innerHTML = h;
   }
-
+ 
   function measureHeader() {
     headerHeight = $('#app-header').offsetHeight;
     document.documentElement.style.setProperty('--header-h', headerHeight + 'px');
   }
-
+ 
   function buildFilters() {
     var cc = {};
     places.forEach(function(p) { (p.category_tags||[]).forEach(function(c) { cc[c]=(cc[c]||0)+1; }); });
@@ -124,7 +126,7 @@
     });
     elFiltersTrack.innerHTML = h;
   }
-
+ 
   function getFilteredPlaces() {
     var list = places;
     if (activeFilters.size > 0) list = list.filter(function(p) { return (p.category_tags||[]).some(function(t){return activeFilters.has(t);}); });
@@ -135,14 +137,14 @@
     else if (currentSort==='name') list.sort(function(a,b){ return a.name.localeCompare(b.name); });
     return list;
   }
-
+ 
   function render() {
     var f = getFilteredPlaces();
     if (f.length===0) { elList.innerHTML=''; elEmpty.classList.remove('hidden'); elCount.textContent=''; }
     else { elEmpty.classList.add('hidden'); elCount.textContent=f.length+' place'+(f.length!==1?'s':''); renderList(f); }
     if (mapReady) renderMapMarkers(f);
   }
-
+ 
   function renderList(list) {
     var now=Date.now(), h='';
     list.forEach(function(p) {
@@ -161,7 +163,7 @@
     });
     elList.innerHTML=h;
   }
-
+ 
   // ── MAP ──
   function initMap() {
     if (map) return;
@@ -203,7 +205,7 @@
     var st=has?'<div class="popup-stats"><div class="popup-stat"><span class="popup-stat-val">~'+fmtDur(rc.duration)+'</span> walk</div><div class="popup-stat"><span class="popup-stat-val">'+fmtDist(rc.distance)+'</span></div></div>':'';
     marker.bindPopup('<div class="popup-inner"><div class="popup-name">'+esc(p.name)+'</div><div class="popup-tags">'+tags+'</div><div class="popup-desc">'+esc(p.short_description)+'</div>'+st+'<a class="popup-nav-btn" href="'+gu+'" target="_blank" rel="noopener"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l19-9-9 19-2-8-8-2z"/></svg> Open in Google Maps</a></div>',{maxWidth:280,closeButton:true}).openPopup();
   }
-
+ 
   // ── GEOLOCATION ──
   function showLocationPrompt() { if (locationGranted) return; elLocationPrompt.classList.remove('hidden'); }
   function startLocation() {
@@ -225,7 +227,7 @@
     console.warn('[Paris] Location error:',err.message);
     if (err.code===1) { elLocationPrompt.innerHTML='<p>Location denied. You can still browse! Tap location to retry.</p>'; elLocationPrompt.classList.remove('hidden'); $('#location-btn').classList.remove('active'); locationGranted=false; }
   }
-
+ 
   // ── OSRM ROUTING (car profile for reliable distances) ──
   function fetchOneRoute(place) {
     var url=OSRM_ROUTE+'/'+userLng+','+userLat+';'+place.longitude+','+place.latitude+'?overview=false&alternatives=false';
@@ -238,7 +240,7 @@
       return {id:place.id, distance:d, duration:d/WALK_SPEED_MS};
     });
   }
-
+ 
   function fetchRoutes() {
     if (userLat==null||routingInFlight) return;
     var visible=getFilteredPlaces();
@@ -247,7 +249,7 @@
     showRoutingStatus('Updating walking times…');
     console.log('[Paris] Fetching routes for '+visible.length+' places via OSRM driving…');
     var now=Date.now(),ok=0,fail=0,bi=0;
-
+ 
     function batch() {
       if (bi>=visible.length) {
         lastRoutingPos={lat:userLat,lng:userLng}; routingInFlight=false;
@@ -267,12 +269,12 @@
     }
     batch();
   }
-
+ 
   function showRoutingStatus(msg) {
     if(!msg){elRoutingStatus.classList.add('hidden');return;}
     elRoutingStatus.textContent=msg; elRoutingStatus.classList.remove('hidden');
   }
-
+ 
   // ── EVENTS ──
   function bindEvents() {
     elFiltersTrack.addEventListener('click',function(e){
@@ -306,7 +308,7 @@
     var cb=$('#clear-filters-btn'); if(cb)cb.addEventListener('click',function(){activeFilters.clear();searchQuery='';elSearch.value='';elSearchClear.classList.remove('visible');$$('.filter-chip').forEach(function(c){c.classList.remove('active');});render();});
     elMapDetail.addEventListener('click',function(e){if(e.target===elMapDetail||e.target.classList.contains('map-detail-handle')){elMapDetail.classList.remove('visible');setTimeout(function(){elMapDetail.classList.add('hidden');},300);}});
   }
-
+ 
   function showOnMap(place) {
     currentView='map'; $$('.view-btn').forEach(function(b){b.classList.remove('active');}); $('[data-view="map"]').classList.add('active');
     elListView.classList.add('hidden'); elMapView.classList.remove('hidden');
@@ -316,7 +318,7 @@
       if(idx>=0&&placeMarkers[idx])showMapPopup(place,placeMarkers[idx]);
     },150);
   }
-
+ 
   // ── HELPERS ──
   function gmapsUrl(p) {
     if(userLat!=null) return 'https://www.google.com/maps/dir/?api=1&origin='+userLat+','+userLng+'&destination='+encodeURIComponent(p.google_maps_query||p.name+', Paris')+'&travelmode=walking';
@@ -327,6 +329,7 @@
   function fmtAgo(ts){var d=Math.round((Date.now()-ts)/60000);return d<1?'just now':d+'m ago';}
   function haversine(lat1,lon1,lat2,lon2){var R=6371000,dLat=(lat2-lat1)*Math.PI/180,dLon=(lon2-lon1)*Math.PI/180;var a=Math.sin(dLat/2)*Math.sin(dLat/2)+Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)*Math.sin(dLon/2);return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));}
   function esc(s){if(!s)return'';var d=document.createElement('div');d.textContent=s;return d.innerHTML;}
-
+ 
   document.addEventListener('DOMContentLoaded',init);
 })();
+ 
