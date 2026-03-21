@@ -936,5 +936,57 @@
     "source_notes": "Spreadsheet (Wednesday and Weekends)",
     "google_maps_query": "Musée des Arts Forains, 53 Av. des Terroirs de France, 75012 Paris",
     "status": "approved"
+  },
+  {
+    "id": "home-base",
+    "name": "Home Base",
+    "normalized_name": "home base",
+    "latitude": 48.8664677,
+    "longitude": 2.3457939,
+    "short_description": "Our apartment near Montorgueil. Central starting point for all Paris adventures.",
+    "more_notes": "",
+    "category_tags": [
+      "home"
+    ],
+    "google_maps_query": "13 Rue Léopold Bellan, 75002 Paris, France"
+  },
+  {
+    "id": "cafe-nuances",
+    "name": "Café Nuances",
+    "normalized_name": "cafe nuances",
+    "latitude": 48.8679334,
+    "longitude": 2.3313608,
+    "short_description": "Eater Paris pick. Specialty coffee with beautiful interiors near Place Vendôme. Known for rose lattes and Ethiopian single-origin brews.",
+    "more_notes": "Self-service ordering. Can get busy — best for takeaway or a relaxed visit. Try the V60 or their signature rose latte.",
+    "category_tags": [
+      "coffee"
+    ],
+    "google_maps_query": "Café Nuances, 25 Rue Danielle Casanova, 75001 Paris, France"
+  },
+  {
+    "id": "holybelly",
+    "name": "HolyBelly",
+    "normalized_name": "holybelly",
+    "latitude": 48.8710383,
+    "longitude": 2.3596596,
+    "short_description": "Eater Paris pick. Legendary brunch and specialty coffee near Canal Saint-Martin. Famous for fluffy pancakes with bourbon butter.",
+    "more_notes": "Expect a wait on weekends — arrive early. The pancake stack with bacon salt and maple syrup is the signature. Great batch brew and matcha too.",
+    "category_tags": [
+      "coffee"
+    ],
+    "google_maps_query": "HolyBelly, 5 Rue Lucien Sampaix, 75010 Paris, France"
+  },
+  {
+    "id": "coutume",
+    "name": "Coutume",
+    "normalized_name": "coutume",
+    "latitude": 48.851643,
+    "longitude": 2.318316,
+    "short_description": "Eater Paris pick. Pioneer of Paris's specialty coffee scene. Excellent single-origin brews and brunch in a bright, airy space.",
+    "more_notes": "Order via QR code at the table. Staff are passionate about explaining their beans and roasting process. The pancake brunch is generous. No decaf available.",
+    "category_tags": [
+      "coffee"
+    ],
+    "google_maps_query": "Coutume, 47 Rue de Babylone, 75007 Paris, France"
   }
 ]
